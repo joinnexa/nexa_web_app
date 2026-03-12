@@ -5,10 +5,13 @@ interface ModalProps {
   onClose: () => void
   title: string
   children: ReactNode
+  /** 'md' = max-w-md (default), 'lg' = max-w-2xl */
+  size?: 'md' | 'lg'
 }
 
-export function Modal({ open, onClose, title, children }: ModalProps) {
+export function Modal({ open, onClose, title, children, size = 'md' }: ModalProps) {
   if (!open) return null
+  const maxWidth = size === 'lg' ? 'max-w-2xl' : 'max-w-md'
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
@@ -16,7 +19,7 @@ export function Modal({ open, onClose, title, children }: ModalProps) {
         onClick={onClose}
         aria-hidden="true"
       />
-      <div className="relative z-10 w-full max-w-md rounded-lg bg-white dark:bg-gray-800 shadow-xl p-6 mx-4">
+      <div className={`relative z-10 w-full ${maxWidth} rounded-lg bg-white dark:bg-gray-800 shadow-xl p-6 mx-4`}>
         <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
           {title}
         </h3>

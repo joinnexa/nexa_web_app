@@ -1,25 +1,37 @@
-import { ReactNode } from 'react'
+import * as React from 'react'
+import { cva, type VariantProps } from 'class-variance-authority'
+import { cn } from './utils'
 
-interface BadgeProps {
-  children: ReactNode
-  variant?: 'default' | 'success' | 'warning' | 'danger' | 'info'
-  className?: string
-}
-
-export function Badge({ children, variant = 'default', className = '' }: BadgeProps) {
-  const variants = {
-    default: 'bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200',
-    success: 'bg-green-100 dark:bg-green-900/40 text-green-800 dark:text-green-300',
-    warning: 'bg-yellow-100 dark:bg-yellow-900/40 text-yellow-800 dark:text-yellow-300',
-    danger: 'bg-red-100 dark:bg-red-900/40 text-red-800 dark:text-red-300',
-    info: 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300',
+const badgeVariants = cva(
+  'inline-flex items-center justify-center rounded-md border px-2.5 py-0.5 text-xs font-medium transition-colors',
+  {
+    variants: {
+      variant: {
+        default: 'border-transparent bg-primary-600 text-white',
+        secondary: 'border-transparent bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300',
+        destructive: 'border-transparent bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+        danger: 'border-transparent bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400',
+        info: 'border-transparent bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400',
+        outline: 'text-gray-700 dark:text-gray-300 border-gray-300 dark:border-gray-600',
+        success: 'border-transparent bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+        warning: 'border-transparent bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+        pay: 'border-transparent bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400',
+        go: 'border-transparent bg-cyan-100 text-cyan-700 dark:bg-cyan-900/30 dark:text-cyan-400',
+        stays: 'border-transparent bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+      },
+    },
+    defaultVariants: {
+      variant: 'default',
+    },
   }
+)
 
-  return (
-    <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]} ${className}`}
-    >
-      {children}
-    </span>
-  )
+export interface BadgeProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof badgeVariants> {}
+
+function Badge({ className, variant, ...props }: BadgeProps) {
+  return <div className={cn(badgeVariants({ variant }), className)} {...props} />
 }
+
+export { Badge, badgeVariants }

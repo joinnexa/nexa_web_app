@@ -1,83 +1,115 @@
-import { ReactNode } from 'react'
+import * as React from 'react'
+import { cn } from './utils'
 
-interface TableProps {
-  headers: string[]
-  children: ReactNode
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  headers?: string[]
   isLoading?: boolean
   emptyMessage?: string
 }
 
-export function Table({ headers, children, isLoading, emptyMessage = 'No data available' }: TableProps) {
-  if (isLoading) {
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({ className, headers, isLoading, emptyMessage, children, ...props }, ref) => {
+    const showEmpty = !isLoading && !children
+    const showLoading = isLoading
+    const showContent = !isLoading && React.Children.count(children) > 0
+
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-        <div className="animate-pulse">
-          <div className="h-12 bg-gray-100 dark:bg-gray-700"></div>
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-16 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50"></div>
-          ))}
-        </div>
+      <div className="relative w-full overflow-x-auto">
+        {showLoading && (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600" />
+          </div>
+        )}
+        {showEmpty && emptyMessage && (
+          <div className="text-center py-12 text-gray-500 dark:text-gray-400">{emptyMessage}</div>
+        )}
+        {showContent && (
+          <table
+            ref={ref}
+            className={cn('w-full caption-bottom text-sm', className)}
+            {...props}
+          >
+            {headers && headers.length > 0 && (
+              <thead className="[&_tr]:border-b border-gray-200 dark:border-gray-700">
+                <tr>
+                  {headers.map((h) => (
+                    <th
+                      key={h}
+                      className="h-10 px-4 text-left align-middle font-medium text-gray-600 dark:text-gray-400"
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody className="[&_tr:last-child]:border-0">{children}</tbody>
+          </table>
+        )}
       </div>
     )
   }
+)
+Table.displayName = 'Table'
 
-  const isEmpty = !children || (Array.isArray(children) && children.length === 0)
+const TableHeader = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
+  <thead ref={ref} className={cn('[&_tr]:border-b border-gray-200 dark:border-gray-700', className)} {...props} />
+))
+TableHeader.displayName = 'TableHeader'
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-          <thead className="bg-gray-50 dark:bg-gray-700/50">
-            <tr>
-              {headers.map((header, index) => (
-                <th
-                  key={index}
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider"
-                >
-                  {header}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-            {isEmpty ? (
-              <tr>
-                <td colSpan={headers.length} className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
-                  {emptyMessage}
-                </td>
-              </tr>
-            ) : (
-              children
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  )
-}
+const TableBody = React.forwardRef<
+  HTMLTableSectionElement,
+  React.HTMLAttributes<HTMLTableSectionElement>
+>(({ className, ...props }, ref) => (
+  <tbody ref={ref} className={cn('[&_tr:last-child]:border-0', className)} {...props} />
+))
+TableBody.displayName = 'TableBody'
 
-interface TableRowProps {
-  children: ReactNode
-  onClick?: () => void
-  className?: string
-}
-
-export function TableRow({ children, onClick, className = '' }: TableRowProps) {
-  return (
+const TableRow = React.forwardRef<HTMLTableRowElement, React.HTMLAttributes<HTMLTableRowElement>>(
+  ({ className, ...props }, ref) => (
     <tr
-      onClick={onClick}
-      className={`${onClick ? 'cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50' : ''} ${className}`}
-    >
-      {children}
-    </tr>
+      ref={ref}
+      className={cn(
+        'border-b border-gray-200 transition-colors hover:bg-gray-50/50 dark:border-gray-700 dark:hover:bg-gray-800/50',
+        className
+      )}
+      {...props}
+    />
   )
-}
+)
+TableRow.displayName = 'TableRow'
 
-interface TableCellProps {
-  children: ReactNode
-  className?: string
-}
+const TableHead = React.forwardRef<
+  HTMLTableCellElement,
+  React.ThHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <th
+    ref={ref}
+    className={cn(
+      'h-10 px-4 text-left align-middle font-medium text-gray-600 dark:text-gray-400 [&:has([role=checkbox])]:pr-0',
+      className
+    )}
+    {...props}
+  />
+))
+TableHead.displayName = 'TableHead'
 
-export function TableCell({ children, className = '' }: TableCellProps) {
-  return <td className={`px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100 ${className}`}>{children}</td>
-}
+const TableCell = React.forwardRef<
+  HTMLTableCellElement,
+  React.TdHTMLAttributes<HTMLTableCellElement>
+>(({ className, ...props }, ref) => (
+  <td
+    ref={ref}
+    className={cn(
+      'px-4 py-3 align-middle [&:has([role=checkbox])]:pr-0',
+      className
+    )}
+    {...props}
+  />
+))
+TableCell.displayName = 'TableCell'
+
+export { Table, TableHeader, TableBody, TableRow, TableHead, TableCell }

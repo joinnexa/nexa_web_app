@@ -20,7 +20,7 @@ function formatVolume(n: number) {
 }
 
 export function Overview() {
-  const { pay, stays, loading, error } = useDashboardStats()
+  const { pay, stays, go, loading, error } = useDashboardStats()
   const [recentTx, setRecentTx] = useState<AdminTransaction[]>([])
   const flagged = pay?.flaggedTransactions ?? 0
   const pendingKyc = pay?.pendingKyc ?? 0
@@ -101,8 +101,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">RIDES TODAY</div>
-          <div className="stat-val">—</div>
-          <div className="stat-sub">No API yet</div>
+          <div className="stat-val">{go?.ridesToday != null ? go.ridesToday.toLocaleString() : '—'}</div>
+          <div className="stat-sub">{go?.goRevenueMtd != null ? `MTD ${formatVolume(go.goRevenueMtd)} MAD` : 'Nexa Go'}</div>
         </div>
         <div className="stat-card b">
           <div className="stat-icon si-b">
@@ -121,8 +121,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">DELIVERIES TODAY</div>
-          <div className="stat-val">—</div>
-          <div className="stat-sub">No API yet</div>
+          <div className="stat-val">{go?.deliveriesToday != null ? go.deliveriesToday.toLocaleString() : '—'}</div>
+          <div className="stat-sub">Completed today</div>
         </div>
         <div className="stat-card p">
           <div className="stat-icon si-p">

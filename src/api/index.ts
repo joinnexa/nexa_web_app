@@ -22,6 +22,44 @@ const DASHBOARD = {
   getStats: () => apiClient.get<DashboardStats>('/admin/dashboard/stats').then((r) => r.data),
 }
 
+const ECOSYSTEM = {
+  getStats: () =>
+    apiClient.get<{
+      pay: DashboardStats
+      go: { ridesToday?: number; deliveriesToday?: number; goRevenueMtd?: number; [key: string]: unknown }
+      stays: { activeListings?: number; bookingsMtd?: number; hostsPending?: number; revenueMtd?: number }
+      systemStatus?: { api: string; database: string }
+    }>('/admin/ecosystem/stats').then((r) => r.data),
+}
+
+const GO = {
+  getStats: () =>
+    apiClient.get<{
+      ridesToday?: number
+      deliveriesToday?: number
+      driversOnline?: number
+      couriersOnline?: number
+      cancellationRate?: number
+      goRevenueMtd?: number
+    }>('/admin/go/stats').then((r) => r.data),
+  getRides: (params?: { page?: number; limit?: number; status?: string }) =>
+    apiClient.get<{ data: unknown[]; total: number; page: number; limit: number }>('/admin/go/rides', { params }).then((r) => r.data),
+  getDeliveryOrders: (params?: { page?: number; limit?: number; status?: string }) =>
+    apiClient.get<{ data: unknown[]; total: number; page: number; limit: number }>('/admin/go/delivery/orders', { params }).then((r) => r.data),
+  getPricing: () => apiClient.get<{ rideTypes: string[]; pricing: Record<string, unknown> }>('/admin/go/pricing').then((r) => r.data),
+  updatePricing: (body: Record<string, unknown>) => apiClient.patch('/admin/go/pricing', body),
+}
+
+const ACTIVITY = {
+  getRecent: (params?: { limit?: number; since?: string }) =>
+    apiClient.get<{ events: Array<{ id: string; type: string; product: string; payload: Record<string, unknown>; created_at: string }> }>('/admin/activity', { params }).then((r) => r.data),
+}
+
+const DRIVERS = {
+  getList: (params?: { page?: number; limit?: number; status?: string }) =>
+    apiClient.get<{ data: unknown[]; total: number; page: number; limit: number }>('/go/drivers', { params }).then((r) => r.data),
+}
+
 const KYC = {
   getApplications: (params?: { source?: string; status?: string; page?: number; limit?: number; search?: string }) =>
     apiClient.get<{ items: KycApplication[]; total?: number } | KycApplication[]>('/admin/kyc/applications', { params }).then((r) => r.data),
@@ -56,6 +94,8 @@ const USERS = {
   getById: (id: string) => apiClient.get<AdminUser>(`/admin/users/${id}`).then((r) => r.data),
   freeze: (userId: string) => apiClient.post(`/admin/users/${userId}/freeze`),
   unfreeze: (userId: string) => apiClient.post(`/admin/users/${userId}/unfreeze`),
+  inviteAdmin: (email: string, role?: string) =>
+    apiClient.post<{ success: boolean; message?: string; email?: string; role?: string }>('/admin/users/invite', { email, role: role ?? 'ADMIN' }),
 }
 
 const WALLETS = {
@@ -67,12 +107,18 @@ const FINANCE = {
   getRevenue: () => apiClient.get('/admin/finance/revenue').then((r) => r.data),
   getDriverPayouts: () => apiClient.get('/admin/finance/driver-payouts').then((r) => r.data),
   getMerchantSettlements: () => apiClient.get('/admin/finance/merchant-settlements').then((r) => r.data),
+  getSettlementsSummary: () =>
+    apiClient.get<{ pendingPayoutsAmount?: number; settledThisWeekAmount?: number; recipientsCount?: number; nextBatchDate?: string }>('/admin/finance/settlements-summary').then((r) => r.data),
 }
 
 const SYSTEM = {
   getFeatureFlags: () => apiClient.get<FeatureFlag[] | Record<string, boolean>>('/admin/system/feature-flags').then((r) => r.data),
   updateFeatureFlag: (key: string, enabled: boolean) =>
     apiClient.patch(`/admin/system/feature-flags/${key}`, { enabled }),
+  getPayConfig: () =>
+    apiClient.get<{ dailyLimitUnverified?: number; dailyLimitKyc?: number; qrExpirySeconds?: number }>('/admin/system/pay-config').then((r) => r.data),
+  updatePayConfig: (body: { dailyLimitUnverified?: number; dailyLimitKyc?: number; qrExpirySeconds?: number }) =>
+    apiClient.patch('/admin/system/pay-config', body),
 }
 
 const STAYS = {
@@ -91,9 +137,18 @@ const STAYS = {
   rejectHostApplication: (id: string, reason: string) => apiClient.post(`/admin/stays/host-applications/${id}/reject`, { reason }),
 }
 
+const SEARCH = {
+  search: (q: string, limit?: number) =>
+    apiClient.get<{ users: unknown[]; transactions: unknown[]; rides: unknown[] }>('/admin/search', { params: { q, limit } }).then((r) => r.data),
+}
+
 export const api = {
   AUTH,
   DASHBOARD,
+  ECOSYSTEM,
+  GO,
+  ACTIVITY,
+  DRIVERS,
   KYC,
   TRANSACTIONS,
   RISK,
@@ -103,6 +158,7 @@ export const api = {
   FINANCE,
   SYSTEM,
   STAYS,
+  SEARCH,
 }
 
 export type { DashboardStats, KycApplication, AdminTransaction, RiskAlert, AuditLogEntry, FeatureFlag, StaysStats, AdminUser, AdminWallet }

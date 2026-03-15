@@ -137,19 +137,19 @@ This document lists backend APIs that the dashboard needs but are **not yet impl
 
 ## Summary table
 
-| # | Area | Endpoint (suggested) | Priority |
-|---|------|----------------------|----------|
-| 1 | Ecosystem | GET /admin/ecosystem/stats | High |
-| 2 | Go | GET /admin/go/stats | High |
-| 2 | Go | GET /admin/go/rides (or clarify GET /go/rides for ADMIN) | High |
-| 2 | Go | Implement GET /go/drivers list for admin | High |
-| 2 | Go | GET /admin/go/delivery/orders | High |
-| 2 | Go | GET /admin/go/pricing + PATCH | Medium |
-| 3 | Activity | GET /admin/activity or /admin/events/recent | Medium |
-| 4 | Config | GET/PATCH Pay limits, GET/PATCH Go pricing | Medium |
-| 5 | Finance | GET /admin/finance/settlements-summary | Low |
-| 6 | Admins | POST /admin/users/invite (or similar) | Low |
-| 8 | Search | GET /admin/search | Low |
+| # | Area | Endpoint (suggested) | Priority | Status |
+|---|------|----------------------|----------|--------|
+| 1 | Ecosystem | GET /admin/ecosystem/stats | High | Done |
+| 2 | Go | GET /admin/go/stats | High | Done |
+| 2 | Go | GET /admin/go/rides (or clarify GET /go/rides for ADMIN) | High | Done |
+| 2 | Go | Implement GET /go/drivers list for admin | High | Done |
+| 2 | Go | GET /admin/go/delivery/orders | High | Done |
+| 2 | Go | GET /admin/go/pricing + PATCH | Medium | Done (GET from config; PATCH returns message) |
+| 3 | Activity | GET /admin/activity or /admin/events/recent | Medium | Done |
+| 4 | Config | GET/PATCH Pay limits, GET/PATCH Go pricing | Medium | Done (pay-config in-memory; go pricing read-only) |
+| 5 | Finance | GET /admin/finance/settlements-summary | Low | Done |
+| 6 | Admins | POST /admin/users/invite (or similar) | Low | Done (stub) |
+| 8 | Search | GET /admin/search | Low | Done |
 
 ---
 

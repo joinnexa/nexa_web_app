@@ -9,9 +9,16 @@ interface StaysStats {
   revenueMtd?: number
 }
 
+interface GoStats {
+  ridesToday?: number
+  deliveriesToday?: number
+  goRevenueMtd?: number
+}
+
 export function useDashboardStats() {
   const [pay, setPay] = useState<DashboardStats | null>(null)
   const [stays, setStays] = useState<StaysStats | null>(null)
+  const [go, setGo] = useState<GoStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -19,16 +26,26 @@ export function useDashboardStats() {
     let cancelled = false
     setLoading(true)
     setError(null)
-    Promise.all([
-      api.DASHBOARD.getStats().catch((e) => e),
-      api.STAYS.getStats().catch((e) => e),
-    ])
-      .then(([payRes, staysRes]) => {
+    api.ECOSYSTEM.getStats()
+      .then((ecosystem) => {
         if (cancelled) return
-        if (payRes && !(payRes instanceof Error)) setPay(payRes as DashboardStats)
-        else if (payRes instanceof Error) setError(payRes.message ?? 'Failed to load stats')
-        if (staysRes && !(staysRes instanceof Error)) setStays(staysRes as StaysStats)
+        if (ecosystem?.pay) setPay(ecosystem.pay)
+        if (ecosystem?.stays) setStays(ecosystem.stays)
+        if (ecosystem?.go) setGo(ecosystem.go)
         setLoading(false)
+      })
+      .catch(() => {
+        if (cancelled) return
+        Promise.all([
+          api.DASHBOARD.getStats().catch((e) => e),
+          api.STAYS.getStats().catch((e) => e),
+        ]).then(([payRes, staysRes]) => {
+          if (cancelled) return
+          if (payRes && !(payRes instanceof Error)) setPay(payRes as DashboardStats)
+          else setError('Failed to load Pay stats')
+          if (staysRes && !(staysRes instanceof Error)) setStays(staysRes as StaysStats)
+          setLoading(false)
+        })
       })
       .catch((e) => {
         if (!cancelled) {
@@ -39,5 +56,5 @@ export function useDashboardStats() {
     return () => { cancelled = true }
   }, [])
 
-  return { pay, stays, loading, error }
+  return { pay, stays, go, loading, error }
 }

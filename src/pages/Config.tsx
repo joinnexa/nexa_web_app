@@ -10,6 +10,8 @@ interface FlagRow {
 
 export function Config() {
   const [flags, setFlags] = useState<FlagRow[]>([])
+  const [payConfig, setPayConfig] = useState<{ dailyLimitUnverified?: number; dailyLimitKyc?: number; qrExpirySeconds?: number } | null>(null)
+  const [goPricing, setGoPricing] = useState<Record<string, { baseFare?: number; perKm?: number; fixedCommission?: number }>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [toggling, setToggling] = useState<string | null>(null)
@@ -17,7 +19,16 @@ export function Config() {
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
-    api.SYSTEM.getFeatureFlags()
+    Promise.all([
+      api.SYSTEM.getFeatureFlags(),
+      api.SYSTEM.getPayConfig().catch(() => null),
+      api.GO.getPricing().catch(() => ({ rideTypes: [], pricing: {} })),
+    ])
+      .then(([flagsRes, pay, go]) => {
+        if (pay) setPayConfig(pay)
+        if (go && typeof go === 'object' && 'pricing' in go) setGoPricing((go as { pricing: Record<string, { baseFare?: number; perKm?: number }> }).pricing)
+        return flagsRes
+      })
       .then((res) => {
         if (Array.isArray(res)) {
           setFlags((res as { key: string; name?: string; enabled: boolean; description?: string | null }[]).map((f) => ({ key: f.key, name: f.name, enabled: f.enabled, description: f.description })))
@@ -30,6 +41,12 @@ export function Config() {
       .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
+
+  const updatePayConfig = (updates: { dailyLimitUnverified?: number; dailyLimitKyc?: number; qrExpirySeconds?: number }) => {
+    api.SYSTEM.updatePayConfig(updates)
+      .then((r: { data?: { dailyLimitUnverified?: number; dailyLimitKyc?: number; qrExpirySeconds?: number } }) => r?.data && setPayConfig(r.data))
+      .catch((e) => alert(e?.response?.data?.message ?? 'Failed to update'))
+  }
 
   useEffect(() => { load() }, [load])
 
@@ -49,13 +66,13 @@ export function Config() {
       <div className="row">
         <div className="col-1">
           <div className="card">
-            <div className="card-hdr"><div className="card-title">Nexa Pay — Limits</div></div>
+            <div className="card-hdr"><div className="card-title">Nexa Pay — Limits</div><button type="button" className="btn btn-dark btn-sm" onClick={() => updatePayConfig({})} title="Reset to defaults">Reset</button></div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Daily send limit (unverified)</div><div style={{ fontSize: 11, color: 'var(--muted)' }}>No API yet</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>500 MAD</div></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Daily send limit (unverified)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>{payConfig?.dailyLimitUnverified != null ? `${payConfig.dailyLimitUnverified.toLocaleString()} MAD` : '—'}</div></div>
               <div style={{ height: 1, background: 'var(--surf2)' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Daily send limit (KYC approved)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>50,000 MAD</div></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Daily send limit (KYC approved)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>{payConfig?.dailyLimitKyc != null ? `${payConfig.dailyLimitKyc.toLocaleString()} MAD` : '—'}</div></div>
               <div style={{ height: 1, background: 'var(--surf2)' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>QR expiry (seconds)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>300</div></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>QR expiry (seconds)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>{payConfig?.qrExpirySeconds ?? '—'}</div></div>
             </div>
           </div>
         </div>
@@ -63,11 +80,11 @@ export function Config() {
           <div className="card">
             <div className="card-hdr"><div className="card-title">Nexa Go — Pricing</div></div>
             <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Base fare (Economy)</div><div style={{ fontSize: 11, color: 'var(--muted)' }}>No API yet</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>15 MAD</div></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Base fare (Economy)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>{goPricing.economy?.baseFare != null ? `${goPricing.economy.baseFare} MAD` : '—'}</div></div>
               <div style={{ height: 1, background: 'var(--surf2)' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Per km rate (Economy)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>3.5 MAD</div></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Per km rate (Economy)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>{goPricing.economy?.perKm != null ? `${goPricing.economy.perKm} MAD` : '—'}</div></div>
               <div style={{ height: 1, background: 'var(--surf2)' }} />
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Platform commission</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>10%</div></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><div><div style={{ fontSize: 12.5, fontWeight: 700 }}>Fixed commission (Economy)</div></div><div style={{ background: 'var(--surf2)', border: '1px solid var(--surf3)', borderRadius: 8, padding: '6px 12px', fontSize: 13, fontWeight: 800 }}>{goPricing.economy?.fixedCommission != null ? `${goPricing.economy.fixedCommission} MAD` : '—'}</div></div>
             </div>
           </div>
         </div>

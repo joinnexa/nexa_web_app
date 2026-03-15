@@ -1,44 +1,114 @@
+import { useCallback, useEffect, useState } from 'react'
+import { api } from '../api'
+
+interface RideRow {
+  id: string
+  passenger_name?: string | null
+  driver_name?: string | null
+  pickup_location?: string | null
+  dropoff_location?: string | null
+  ride_type?: string | null
+  fare_amount?: number
+  status?: string
+}
+
 export function Rides() {
+  const [stats, setStats] = useState<{ ridesToday?: number; completedRidesToday?: number; driversOnline?: number; cancellationRate?: number } | null>(null)
+  const [rides, setRides] = useState<RideRow[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(1)
+  const [statusFilter, setStatusFilter] = useState<string>('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const loadStats = useCallback(() => {
+    api.GO.getStats()
+      .then(setStats)
+      .catch(() => setStats(null))
+  }, [])
+
+  const loadRides = useCallback(() => {
+    setLoading(true)
+    api.GO.getRides({ page, limit: 20, status: statusFilter || undefined })
+      .then((res) => {
+        setRides((res?.data ?? []) as RideRow[])
+        setTotal(res?.total ?? 0)
+      })
+      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load rides'))
+      .finally(() => setLoading(false))
+  }, [page, statusFilter])
+
+  useEffect(() => { loadStats() }, [loadStats])
+  useEffect(() => { loadRides() }, [loadRides])
+
   return (
     <>
       <div className="section-title">Rides — Nexa Go</div>
-      <div className="section-sub">Live taxi operations from <code style={{ fontSize: 11, background: 'var(--surf2)', padding: '2px 6px', borderRadius: 4 }}>/api/v1/go/rides</code></div>
+      <div className="section-sub">Live taxi operations</div>
+      {error && <div className="alert alert-r">{error}</div>}
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)' }}>
-        <div className="stat-card v"><div className="stat-label">ACTIVE RIDES</div><div className="stat-val">142</div><div className="stat-sub">Right now</div></div>
-        <div className="stat-card g"><div className="stat-label">COMPLETED TODAY</div><div className="stat-val">1,847</div><div className="stat-sub"><span className="stat-trend trend-up">↑ 12%</span></div></div>
-        <div className="stat-card y"><div className="stat-label">DRIVERS ONLINE</div><div className="stat-val">284</div><div className="stat-sub">Casablanca zone</div></div>
-        <div className="stat-card r"><div className="stat-label">CANCELLATION RATE</div><div className="stat-val">4.2%</div><div className="stat-sub"><span className="stat-trend trend-dn">↑ 0.8%</span> vs avg</div></div>
+        <div className="stat-card v">
+          <div className="stat-label">RIDES TODAY</div>
+          <div className="stat-val">{stats?.ridesToday != null ? stats.ridesToday.toLocaleString() : '—'}</div>
+          <div className="stat-sub">From API</div>
+        </div>
+        <div className="stat-card g">
+          <div className="stat-label">COMPLETED TODAY</div>
+          <div className="stat-val">{stats?.completedRidesToday != null ? stats.completedRidesToday.toLocaleString() : '—'}</div>
+        </div>
+        <div className="stat-card y">
+          <div className="stat-label">DRIVERS ONLINE</div>
+          <div className="stat-val">{stats?.driversOnline != null ? stats.driversOnline : '—'}</div>
+        </div>
+        <div className="stat-card r">
+          <div className="stat-label">CANCELLATION RATE</div>
+          <div className="stat-val">{stats?.cancellationRate != null ? `${stats.cancellationRate}%` : '—'}</div>
+        </div>
       </div>
       <div className="row">
         <div className="col-2">
           <div className="card">
-            <div className="card-hdr"><div className="card-title">Live Ride Feed</div><span className="badge badge-g" style={{ marginLeft: 'auto' }}>● Live</span></div>
+            <div className="card-hdr">
+              <div className="card-title">Ride List</div>
+              <div className="card-actions">
+                <div className="tabs">
+                  <button type="button" className={`tab ${!statusFilter ? 'active' : ''}`} onClick={() => setStatusFilter('')}>All</button>
+                  <button type="button" className={`tab ${statusFilter === 'COMPLETED' ? 'active' : ''}`} onClick={() => setStatusFilter('COMPLETED')}>Completed</button>
+                  <button type="button" className={`tab ${statusFilter === 'REQUESTED' ? 'active' : ''}`} onClick={() => setStatusFilter('REQUESTED')}>Requested</button>
+                  <button type="button" className={`tab ${statusFilter === 'CANCELLED' ? 'active' : ''}`} onClick={() => setStatusFilter('CANCELLED')}>Cancelled</button>
+                </div>
+                <button type="button" className="btn btn-dark btn-sm" onClick={() => loadRides()} disabled={loading}>Refresh</button>
+              </div>
+            </div>
             <div className="table-wrap">
               <table>
                 <thead><tr><th>Ride ID</th><th>Passenger</th><th>Driver</th><th>Route</th><th>Type</th><th>Fare</th><th>Status</th></tr></thead>
                 <tbody>
-                  <tr><td className="td-mono">RD-9918</td><td>Karim M.</td><td>Omar K.</td><td>Maârif → Morocco Mall</td><td><span className="badge badge-v">Economy</span></td><td>42 MAD</td><td><span className="badge badge-g">In Progress</span></td></tr>
-                  <tr><td className="td-mono">RD-9917</td><td>Sara B.</td><td>Hassan L.</td><td>Anfa → Ain Diab</td><td><span className="badge badge-y">Comfort</span></td><td>68 MAD</td><td><span className="badge badge-b">Pickup</span></td></tr>
-                  <tr><td className="td-mono">RD-9916</td><td>Youssef A.</td><td>Ali M.</td><td>Derb Sultan → CFC</td><td><span className="badge badge-v">Economy</span></td><td>35 MAD</td><td><span className="badge badge-g">Completed</span></td></tr>
-                  <tr><td className="td-mono">RD-9915</td><td>Fatima Z.</td><td>—</td><td>Hay Hassani → Centre</td><td><span className="badge badge-v">Moto</span></td><td>18 MAD</td><td><span className="badge badge-y">Searching</span></td></tr>
+                  {loading && rides.length === 0 && <tr><td colSpan={7} className="td-muted" style={{ padding: 16 }}>Loading…</td></tr>}
+                  {!loading && rides.length === 0 && <tr><td colSpan={7} className="td-muted" style={{ padding: 16 }}>No rides</td></tr>}
+                  {rides.map((r) => (
+                    <tr key={r.id}>
+                      <td className="td-mono">{r.id.slice(0, 8)}…</td>
+                      <td>{r.passenger_name ?? '—'}</td>
+                      <td>{r.driver_name ?? '—'}</td>
+                      <td>{[r.pickup_location, r.dropoff_location].filter(Boolean).join(' → ') || '—'}</td>
+                      <td><span className="badge badge-v">{r.ride_type ?? '—'}</span></td>
+                      <td>{r.fare_amount != null ? `${r.fare_amount} MAD` : '—'}</td>
+                      <td><span className={`badge badge-${r.status === 'COMPLETED' ? 'g' : r.status === 'CANCELLED' ? 'r' : 'y'}`}>{r.status ?? '—'}</span></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        </div>
-        <div className="col-1">
-          <div className="card" style={{ height: '100%' }}>
-            <div className="card-hdr"><div className="card-title">Driver Zones</div></div>
-            <div className="card-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {[{ zone: 'Maârif', drivers: 84, pct: 84, c: 'var(--g)' }, { zone: 'Ain Diab', drivers: 62, pct: 62, c: 'var(--y)' }, { zone: 'Anfa', drivers: 48, pct: 48, c: 'var(--b)' }, { zone: 'Derb Sultan', drivers: 22, pct: 22, c: 'var(--r)' }, { zone: 'Sidi Maarouf', drivers: 12, pct: 12, c: 'var(--mid)' }].map(({ zone, drivers, pct, c }) => (
-                  <div key={zone}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 4 }}><span style={{ fontWeight: 700 }}>{zone}</span><span style={{ color: c, fontWeight: 700 }}>{drivers} drivers</span></div>
-                    <div className="progress"><div className="progress-fill" style={{ width: `${pct}%`, background: c }} /></div>
-                  </div>
-                ))}
+            {total > 20 && (
+              <div className="card-body" style={{ borderTop: '1px solid var(--surf2)', paddingTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span className="td-muted">Total: {total}</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button type="button" className="btn btn-dark btn-sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>Previous</button>
+                  <button type="button" className="btn btn-dark btn-sm" disabled={page * 20 >= total} onClick={() => setPage((p) => p + 1)}>Next</button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </div>

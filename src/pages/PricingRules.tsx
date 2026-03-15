@@ -1,17 +1,65 @@
+import { useCallback, useEffect, useState } from 'react'
+import { api } from '../api'
+
+interface RidePricing {
+  rideType?: string
+  baseFare?: number
+  perKm?: number
+  perMin?: number
+  minimumFare?: number
+  bookingFee?: number
+  fixedCommission?: number
+}
+
 export function PricingRules() {
+  const [rideTypes, setRideTypes] = useState<string[]>([])
+  const [pricing, setPricing] = useState<Record<string, RidePricing>>({})
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    setError(null)
+    api.GO.getPricing()
+      .then((res) => {
+        setRideTypes(res?.rideTypes ?? [])
+        setPricing((res?.pricing ?? {}) as Record<string, RidePricing>)
+      })
+      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load pricing'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  if (loading && rideTypes.length === 0) return <div className="section-title">Pricing Rules</div>
+  if (error && rideTypes.length === 0) return <><div className="section-title">Pricing Rules</div><div className="alert alert-r">{error}</div></>
+
   return (
     <>
       <div className="section-title">Pricing Rules</div>
-      <div className="section-sub">Fare tables, commissions, surge · <code style={{ fontSize: 11, background: 'var(--surf2)', padding: '2px 6px', borderRadius: 4 }}>/api/v1/go/rides/pricing</code></div>
+      <div className="section-sub">Fare tables from backend (Casablanca)</div>
       <div className="card">
-        <div className="card-hdr"><div className="card-title">Vehicle Type Rates</div></div>
+        <div className="card-hdr"><div className="card-title">Vehicle Type Rates</div><button type="button" className="btn btn-dark btn-sm" onClick={load}>Refresh</button></div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Type</th><th>Base Fare</th><th>Per km</th><th>Per min</th><th>Commission</th><th>Min Fare</th></tr></thead>
+            <thead><tr><th>Type</th><th>Base Fare</th><th>Per km</th><th>Per min</th><th>Min Fare</th><th>Booking Fee</th><th>Commission</th></tr></thead>
             <tbody>
-              <tr><td><span className="badge badge-v">Economy</span></td><td>15 MAD</td><td>3.5 MAD</td><td>0.5 MAD</td><td>10%</td><td>20 MAD</td></tr>
-              <tr><td><span className="badge badge-y">Comfort</span></td><td>25 MAD</td><td>5.0 MAD</td><td>0.8 MAD</td><td>12%</td><td>35 MAD</td></tr>
-              <tr><td><span className="badge badge-o">Moto</span></td><td>8 MAD</td><td>2.0 MAD</td><td>0.3 MAD</td><td>10%</td><td>12 MAD</td></tr>
+              {rideTypes.length === 0 && !loading && <tr><td colSpan={7} className="td-muted" style={{ padding: 16 }}>No pricing data</td></tr>}
+              {rideTypes.map((type) => {
+                const p = pricing[type]
+                if (!p) return null
+                return (
+                  <tr key={type}>
+                    <td><span className="badge badge-v">{type}</span></td>
+                    <td>{p.baseFare != null ? `${p.baseFare} MAD` : '—'}</td>
+                    <td>{p.perKm != null ? `${p.perKm} MAD` : '—'}</td>
+                    <td>{p.perMin != null ? `${p.perMin} MAD` : '—'}</td>
+                    <td>{p.minimumFare != null ? `${p.minimumFare} MAD` : '—'}</td>
+                    <td>{p.bookingFee != null ? `${p.bookingFee} MAD` : '—'}</td>
+                    <td>{p.fixedCommission != null ? `${p.fixedCommission} MAD` : '—'}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>

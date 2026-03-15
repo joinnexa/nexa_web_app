@@ -10,14 +10,22 @@ function formatVol(n: number) {
 
 export function PayDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [revenue, setRevenue] = useState<{ daily_revenue?: number; monthly_revenue?: number; total?: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
-    api.DASHBOARD.getStats()
-      .then(setStats)
+    Promise.all([
+      api.DASHBOARD.getStats().catch((e) => e),
+      api.FINANCE.getRevenue().catch(() => null),
+    ])
+      .then(([s, r]) => {
+        if (s && !(s instanceof Error)) setStats(s)
+        else if (s instanceof Error) setError(s?.message ?? 'Failed to load')
+        if (r && typeof r === 'object') setRevenue(r)
+      })
       .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
@@ -37,7 +45,13 @@ export function PayDashboard() {
         <div className="stat-card b"><div className="stat-label">TOTAL WALLETS</div><div className="stat-val">{stats?.totalWallets?.toLocaleString() ?? '—'}</div><div className="stat-sub">Active</div></div>
         <div className="stat-card v"><div className="stat-label">TOTAL USERS</div><div className="stat-val">{stats?.totalUsers?.toLocaleString() ?? '—'}</div><div className="stat-sub">Success rate {stats?.successRate ?? '—'}%</div></div>
       </div>
-      <div className="alert alert-y">
+      {revenue && (revenue.daily_revenue != null || revenue.monthly_revenue != null) && (
+        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2,1fr)', marginTop: 16 }}>
+          <div className="stat-card y"><div className="stat-label">DAILY REVENUE</div><div className="stat-val">{revenue.daily_revenue != null ? formatVol(revenue.daily_revenue) : '—'} MAD</div></div>
+          <div className="stat-card g"><div className="stat-label">MONTHLY REVENUE</div><div className="stat-val">{revenue.monthly_revenue != null ? formatVol(revenue.monthly_revenue) : '—'} MAD</div></div>
+        </div>
+      )}
+      <div className="alert alert-y" style={{ marginTop: 16 }}>
         NFC payments: enable/disable via Config → Feature Flags when backend supports it.
       </div>
     </>

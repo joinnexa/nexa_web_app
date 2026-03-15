@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Nexa Admin — Ecosystem Dashboard</title>
+<style>
+/* ─── TOKENS ─── */
+:root {
+  --y:#F5C300; --ya:#E6A800; --ys:#FFFBEB; --yd:#CC8800;
+  --v:#6B5AED; --vm:#8B7CF6; --vs:#EEF0FF;
+  --p:#F0527A; --ps:#FFF0F5;
+  --g:#16A34A; --gs:#F0FDF4;
+  --r:#DC2626; --rs:#FEF2F2;
+  --b:#0EA5E9; --bs:#F0F9FF;
+  --o:#EA580C; --os:#FFF7ED;
+  --ink:#0F172A; --ink2:#1E293B; --ink3:#334155;
+  --mid:#64748B; --muted:#94A3B8; --ghost:#CBD5E1;
+  --surf:#F8FAFC; --surf2:#F1F5F9; --surf3:#E2E8F0;
+  --white:#FFFFFF; --border:rgba(0,0,0,.07);
+  --sh:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+  --sh2:0 4px 24px rgba(0,0,0,.08);
+  --sh3:0 8px 40px rgba(0,0,0,.12);
+  --sidebar:240px;
+  --radius:10px; --radius-lg:16px;
+}
+
+/* ─── RESET ─── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{font-size:14px;scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,'Inter','Segoe UI',sans-serif;background:var(--surf);color:var(--ink);min-height:100vh;display:flex;overflow-x:hidden}
+button{cursor:pointer;border:none;background:none;font:inherit}
+a{text-decoration:none;color:inherit}
+svg{display:block}
+
+/* ─── SIDEBAR ─── */
+.sidebar {
+  width:var(--sidebar); flex-shrink:0; height:100vh; position:sticky; top:0;
+  background:var(--ink); display:flex; flex-direction:column;
+  border-right:1px solid rgba(255,255,255,.05); overflow-y:auto; overflow-x:hidden;
+  scrollbar-width:none;
+}
+.sidebar::-webkit-scrollbar{display:none}
+
+.sb-brand {
+  padding:20px 18px 16px; display:flex; align-items:center; gap:10px;
+  border-bottom:1px solid rgba(255,255,255,.05); flex-shrink:0;
+}
+.sb-logo {
+  width:34px; height:34px; background:var(--y); border-radius:10px;
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  box-shadow:0 4px 12px rgba(245,195,0,.35);
+}
+.sb-brand-text { flex:1; min-width:0; }
+.sb-brand-name { font-size:13px; font-weight:800; color:white; letter-spacing:-.3px; }
+.sb-brand-sub { font-size:10px; color:rgba(255,255,255,.3); margin-top:1px; }
+.env-badge {
+  font-size:8.5px; font-weight:700; padding:2px 7px; border-radius:20px;
+  background:rgba(245,195,0,.15); color:var(--y); letter-spacing:.3px;
+}
+
+.sb-section { padding:14px 12px 4px; }
+.sb-section-label {
+  font-size:9px; font-weight:700; color:rgba(255,255,255,.22);
+  letter-spacing:1px; text-transform:uppercase; padding:0 8px; margin-bottom:4px;
+}
+.sb-item {
+  display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:9px;
+  color:rgba(255,255,255,.45); font-size:12.5px; font-weight:500;
+  cursor:pointer; transition:background .15s,color .15s; position:relative;
+  user-select:none;
+}
+.sb-item:hover { background:rgba(255,255,255,.06); color:rgba(255,255,255,.75); }
+.sb-item.active { background:rgba(245,195,0,.12); color:var(--y); font-weight:700; }
+.sb-item.active .sb-icon { opacity:1; }
+.sb-icon { opacity:.4; flex-shrink:0; }
+.sb-item.active .sb-icon { opacity:1; }
+.sb-badge {
+  margin-left:auto; font-size:9px; font-weight:800; padding:2px 7px;
+  border-radius:20px; background:var(--r); color:white; flex-shrink:0;
+}
+.sb-badge-y { background:var(--y); color:var(--ink); }
+.sb-divider { height:1px; background:rgba(255,255,255,.05); margin:8px 12px; }
+
+.sb-product-tag {
+  display:flex; align-items:center; gap:6px; padding:6px 10px 2px;
+  font-size:10px; font-weight:800; letter-spacing:.5px;
+}
+.sb-product-dot { width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+
+.sb-bottom {
+  margin-top:auto; padding:12px; border-top:1px solid rgba(255,255,255,.05); flex-shrink:0;
+}
+.sb-user {
+  display:flex; align-items:center; gap:9px; padding:8px 10px; border-radius:9px;
+  cursor:pointer; transition:background .15s;
+}
+.sb-user:hover { background:rgba(255,255,255,.06); }
+.sb-user-av {
+  width:30px; height:30px; border-radius:8px; background:var(--y);
+  display:flex; align-items:center; justify-content:center;
+  font-size:12px; font-weight:800; color:var(--ink); flex-shrink:0;
+}
+.sb-user-name { font-size:12px; font-weight:700; color:rgba(255,255,255,.75); }
+.sb-user-role { font-size:10px; color:rgba(255,255,255,.3); margin-top:1px; }
+
+/* ─── MAIN ─── */
+.main { flex:1; display:flex; flex-direction:column; min-width:0; }
+
+/* ─── TOPBAR ─── */
+.topbar {
+  height:56px; background:white; border-bottom:1px solid var(--surf3);
+  display:flex; align-items:center; gap:12px; padding:0 24px;
+  position:sticky; top:0; z-index:100; flex-shrink:0;
+}
+.topbar-title { font-size:15px; font-weight:800; color:var(--ink); letter-spacing:-.3px; }
+.topbar-breadcrumb {
+  font-size:12px; color:var(--muted); display:flex; align-items:center; gap:5px;
+}
+.topbar-breadcrumb span { color:var(--ghost); }
+.topbar-search {
+  margin-left:auto; display:flex; align-items:center; gap:8px;
+  background:var(--surf2); border:1px solid var(--surf3); border-radius:9px;
+  padding:6px 12px; width:240px;
+}
+.topbar-search input {
+  border:none; background:none; font:inherit; font-size:12.5px;
+  color:var(--ink); outline:none; width:100%;
+}
+.topbar-search input::placeholder { color:var(--muted); }
+.topbar-actions { display:flex; align-items:center; gap:8px; }
+.topbar-btn {
+  width:34px; height:34px; border-radius:9px; background:var(--surf2);
+  border:1px solid var(--surf3); display:flex; align-items:center; justify-content:center;
+  color:var(--mid); transition:background .15s; cursor:pointer; position:relative;
+}
+.topbar-btn:hover { background:var(--surf3); }
+.notif-dot {
+  position:absolute; top:6px; right:6px; width:7px; height:7px;
+  background:var(--r); border-radius:50%; border:1.5px solid white;
+}
+.env-pill {
+  font-size:10px; font-weight:700; padding:4px 10px; border-radius:20px;
+  background:var(--gs); color:var(--g); border:1px solid rgba(22,163,74,.2);
+}
+
+/* ─── CONTENT ─── */
+.content { flex:1; padding:24px; overflow-x:hidden; }
+.page { display:none; }
+.page.active { display:block; }
+
+/* ─── STAT CARDS ─── */
+.stats-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:24px; }
+.stat-card {
+  background:white; border-radius:var(--radius-lg); padding:18px 20px;
+  border:1px solid var(--surf3); box-shadow:var(--sh); position:relative; overflow:hidden;
+}
+.stat-card::before {
+  content:''; position:absolute; right:-16px; top:-16px;
+  width:70px; height:70px; border-radius:50%; opacity:.06;
+}
+.stat-card.y::before { background:var(--y); }
+.stat-card.v::before { background:var(--v); }
+.stat-card.g::before { background:var(--g); }
+.stat-card.r::before { background:var(--r); }
+.stat-card.b::before { background:var(--b); }
+.stat-card.p::before { background:var(--p); }
+.stat-card.o::before { background:var(--o); }
+.stat-label { font-size:11px; font-weight:600; color:var(--mid); letter-spacing:.2px; margin-bottom:8px; }
+.stat-val { font-size:26px; font-weight:900; letter-spacing:-1px; color:var(--ink); line-height:1; margin-bottom:6px; }
+.stat-sub { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:4px; }
+.stat-trend { font-size:10.5px; font-weight:700; padding:2px 6px; border-radius:6px; }
+.trend-up { background:var(--gs); color:var(--g); }
+.trend-dn { background:var(--rs); color:var(--r); }
+.stat-icon {
+  position:absolute; top:18px; right:18px;
+  width:36px; height:36px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+}
+.si-y { background:var(--ys); color:var(--ya); }
+.si-v { background:var(--vs); color:var(--v); }
+.si-g { background:var(--gs); color:var(--g); }
+.si-r { background:var(--rs); color:var(--r); }
+.si-b { background:var(--bs); color:var(--b); }
+.si-p { background:var(--ps); color:var(--p); }
+.si-o { background:var(--os); color:var(--o); }
+
+/* ─── GRID LAYOUTS ─── */
+.row { display:flex; gap:16px; margin-bottom:20px; }
+.col-2 { flex:2; min-width:0; }
+.col-1 { flex:1; min-width:0; }
+.col-3 { flex:3; min-width:0; }
+
+/* ─── CARD ─── */
+.card {
+  background:white; border-radius:var(--radius-lg); border:1px solid var(--surf3);
+  box-shadow:var(--sh); overflow:hidden;
+}
+.card-hdr {
+  padding:16px 20px; border-bottom:1px solid var(--surf2);
+  display:flex; align-items:center; gap:10px;
+}
+.card-title { font-size:13px; font-weight:800; color:var(--ink); letter-spacing:-.2px; }
+.card-sub { font-size:11px; color:var(--muted); margin-top:2px; }
+.card-body { padding:16px 20px; }
+.card-actions { margin-left:auto; display:flex; gap:6px; align-items:center; }
+
+/* ─── CHART BAR ─── */
+.chart-bars {
+  display:flex; align-items:flex-end; gap:6px; height:120px; padding:0 4px;
+}
+.bar-wrap { flex:1; display:flex; flex-direction:column; align-items:center; gap:4px; }
+.bar {
+  width:100%; border-radius:5px 5px 0 0; transition:opacity .2s;
+  cursor:pointer; position:relative;
+}
+.bar:hover { opacity:.8; }
+.bar-lbl { font-size:9px; color:var(--muted); font-weight:600; }
+.bar-val { font-size:9px; color:var(--mid); font-weight:700; }
+
+/* ─── MINI CHART (sparkline) ─── */
+.sparkline { height:44px; width:100%; }
+
+/* ─── TABLE ─── */
+.table-wrap { overflow-x:auto; }
+table { width:100%; border-collapse:collapse; }
+th {
+  font-size:10.5px; font-weight:700; color:var(--muted); text-align:left;
+  padding:10px 16px; background:var(--surf); border-bottom:1px solid var(--surf3);
+  letter-spacing:.3px; text-transform:uppercase; white-space:nowrap;
+}
+td {
+  font-size:12.5px; color:var(--ink); padding:11px 16px;
+  border-bottom:1px solid var(--surf2); vertical-align:middle; white-space:nowrap;
+}
+tr:last-child td { border-bottom:none; }
+tr:hover td { background:var(--surf); }
+.td-muted { color:var(--muted); }
+.td-mono { font-family:'SF Mono',Menlo,monospace; font-size:11.5px; }
+
+/* ─── BADGE / CHIP ─── */
+.badge {
+  display:inline-flex; align-items:center; gap:4px;
+  font-size:10.5px; font-weight:700; padding:3px 9px; border-radius:20px;
+  white-space:nowrap;
+}
+.badge-g { background:var(--gs); color:var(--g); }
+.badge-r { background:var(--rs); color:var(--r); }
+.badge-y { background:var(--ys); color:var(--ya); }
+.badge-v { background:var(--vs); color:var(--v); }
+.badge-b { background:var(--bs); color:var(--b); }
+.badge-o { background:var(--os); color:var(--o); }
+.badge-n { background:var(--surf2); color:var(--mid); }
+.badge-p { background:var(--ps); color:var(--p); }
+
+/* ─── BTN ─── */
+.btn {
+  display:inline-flex; align-items:center; gap:6px; font:inherit;
+  font-size:12px; font-weight:700; padding:7px 14px; border-radius:9px;
+  cursor:pointer; transition:opacity .15s,box-shadow .15s; border:none;
+}
+.btn:hover { opacity:.88; }
+.btn-y { background:var(--y); color:var(--ink); }
+.btn-v { background:var(--v); color:white; }
+.btn-dark { background:var(--ink); color:white; }
+.btn-ghost { background:var(--surf2); color:var(--ink); border:1px solid var(--surf3); }
+.btn-r { background:var(--rs); color:var(--r); }
+.btn-g { background:var(--gs); color:var(--g); }
+.btn-sm { font-size:11px; padding:5px 10px; border-radius:7px; }
+
+/* ─── ACTIVITY FEED ─── */
+.feed-item {
+  display:flex; align-items:flex-start; gap:10px; padding:10px 0;
+  border-bottom:1px solid var(--surf2);
+}
+.feed-item:last-child { border-bottom:none; }
+.feed-icon {
+  width:32px; height:32px; border-radius:9px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center; font-size:14px;
+}
+.feed-text { font-size:12px; color:var(--ink); line-height:1.5; }
+.feed-time { font-size:10.5px; color:var(--muted); margin-top:2px; }
+.feed-amt { font-size:12px; font-weight:800; margin-left:auto; white-space:nowrap; }
+
+/* ─── KYC / USER ROW ─── */
+.user-cell { display:flex; align-items:center; gap:9px; }
+.av {
+  width:28px; height:28px; border-radius:8px; flex-shrink:0;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; font-weight:800; color:white;
+}
+.av-y { background:var(--y); color:var(--ink); }
+.av-v { background:var(--v); }
+.av-g { background:var(--g); }
+.av-b { background:var(--b); }
+.av-p { background:var(--p); }
+.av-o { background:var(--o); }
+.user-name { font-size:12.5px; font-weight:700; color:var(--ink); }
+.user-id { font-size:10px; color:var(--muted); }
+
+/* ─── PROGRESS ─── */
+.progress { height:6px; border-radius:3px; background:var(--surf2); overflow:hidden; }
+.progress-fill { height:100%; border-radius:3px; }
+
+/* ─── ALERT BANNER ─── */
+.alert {
+  display:flex; align-items:center; gap:10px; padding:12px 16px;
+  border-radius:var(--radius); font-size:12px; margin-bottom:16px;
+}
+.alert-r { background:var(--rs); border:1px solid rgba(220,38,38,.15); color:var(--r); }
+.alert-y { background:var(--ys); border:1px solid rgba(245,195,0,.25); color:var(--ya); }
+.alert-g { background:var(--gs); border:1px solid rgba(22,163,74,.15); color:var(--g); }
+
+/* ─── MAP PLACEHOLDER ─── */
+.map-ph {
+  background:linear-gradient(160deg,#e8f0f8,#d4e0f0);
+  border-radius:var(--radius); overflow:hidden; position:relative;
+}
+
+/* ─── DONUT ─── */
+.donut-wrap { display:flex; align-items:center; gap:20px; padding:4px 0; }
+.donut-legend { display:flex; flex-direction:column; gap:7px; flex:1; }
+.legend-row { display:flex; align-items:center; gap:7px; font-size:12px; }
+.legend-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+.legend-val { margin-left:auto; font-weight:700; font-size:12px; }
+
+/* ─── TABS ─── */
+.tabs { display:flex; gap:2px; background:var(--surf2); padding:3px; border-radius:10px; }
+.tab {
+  font-size:11.5px; font-weight:600; padding:6px 14px; border-radius:8px;
+  color:var(--mid); cursor:pointer; transition:all .15s;
+}
+.tab.active { background:white; color:var(--ink); font-weight:700; box-shadow:var(--sh); }
+
+/* ─── TOGGLE ─── */
+.toggle {
+  width:36px; height:20px; border-radius:10px; background:var(--y);
+  position:relative; cursor:pointer; flex-shrink:0; transition:background .2s;
+}
+.toggle.off { background:var(--ghost); }
+.toggle-knob {
+  position:absolute; top:2px; width:16px; height:16px; border-radius:50%;
+  background:white; box-shadow:0 1px 3px rgba(0,0,0,.2); transition:left .2s;
+}
+.toggle .toggle-knob { left:18px; }
+.toggle.off .toggle-knob { left:2px; }
+
+/* ─── SECTION TITLE ─── */
+.section-title {
+  font-size:17px; font-weight:900; color:var(--ink); letter-spacing:-.4px;
+  margin-bottom:4px;
+}
+.section-sub { font-size:12.5px; color:var(--muted); margin-bottom:20px; }
+
+/* ─── RISK METER ─── */
+.risk-bar { height:10px; border-radius:5px; overflow:hidden; background:var(--surf2); }
+.risk-fill {
+  height:100%; border-radius:5px;
+  background:linear-gradient(90deg,var(--g),var(--y),var(--r));
+}
+
+/* ─── RESPONSIVE ─── */
+@media(max-width:1200px){
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  :root{--sidebar:210px}
+}
+@media(max-width:900px){
+  .sidebar{display:none}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .row{flex-direction:column}
+}
+
+/* ─── ANIMATIONS ─── */
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.page.active{animation:fadeIn .2s ease}
+
+/* ─── SCROLLBAR ─── */
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--surf3);border-radius:3px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════ SIDEBAR ══ -->
+<aside class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">
+      <svg width="20" height="20" viewBox="0 0 40 40" fill="none">
+        <path d="M20 2C20 2 15 12 15 20C15 12 10 2 20 2Z" fill="#1C1C1E"/>
+        <path d="M20 2C20 2 25 12 25 20C25 12 30 2 20 2Z" fill="#1C1C1E" opacity=".6"/>
+        <path d="M38 20C38 20 28 15 20 15C28 15 38 10 38 20Z" fill="#1C1C1E"/>
+        <path d="M38 20C38 20 28 25 20 25C28 25 38 30 38 20Z" fill="#1C1C1E" opacity=".6"/>
+        <path d="M20 38C20 38 15 28 15 20C15 28 10 38 20 38Z" fill="#1C1C1E"/>
+        <path d="M20 38C20 38 25 28 25 20C25 28 30 38 20 38Z" fill="#1C1C1E" opacity=".6"/>
+        <path d="M2 20C2 20 12 15 20 15C12 15 2 10 2 20Z" fill="#1C1C1E"/>
+        <path d="M2 20C2 20 12 25 20 25C12 25 2 30 2 20Z" fill="#1C1C1E" opacity=".6"/>
+        <circle cx="20" cy="20" r="6" fill="#1C1C1E"/>
+      </svg>
+    </div>
+    <div class="sb-brand-text">
+      <div class="sb-brand-name">Nexa Admin</div>
+      <div class="sb-brand-sub">Ecosystem Dashboard</div>
+    </div>
+    <span class="env-badge">PROD</span>
+  </div>
+
+  <!-- OVERVIEW -->
+  <div class="sb-section">
+    <div class="sb-section-label">Overview</div>
+    <div class="sb-item active" onclick="nav('overview',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Overview
+    </div>
+    <div class="sb-item" onclick="nav('activity',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+      Live Activity
+      <span class="sb-badge">●</span>
+    </div>
+    <div class="sb-item" onclick="nav('users',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      All Users
+    </div>
+  </div>
+
+  <!-- NEXA PAY -->
+  <div class="sb-divider"></div>
+  <div class="sb-section">
+    <div class="sb-product-tag">
+      <div class="sb-product-dot" style="background:var(--y)"></div>
+      <span style="font-size:9.5px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.8px">NEXA PAY</span>
+    </div>
+    <div class="sb-item" onclick="nav('pay-dashboard',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+      Pay Dashboard
+    </div>
+    <div class="sb-item" onclick="nav('kyc',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      KYC Review
+      <span class="sb-badge" style="background:var(--y);color:var(--ink)">12</span>
+    </div>
+    <div class="sb-item" onclick="nav('transactions',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+      Transactions
+    </div>
+    <div class="sb-item" onclick="nav('wallets',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/><path d="M12 22V7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>
+      Wallets
+    </div>
+    <div class="sb-item" onclick="nav('fraud',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      Fraud & Risk
+      <span class="sb-badge">3</span>
+    </div>
+    <div class="sb-item" onclick="nav('settlements',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 1l4 4-4 4"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><path d="M7 23l-4-4 4-4"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></svg>
+      Settlements
+    </div>
+  </div>
+
+  <!-- NEXA GO -->
+  <div class="sb-divider"></div>
+  <div class="sb-section">
+    <div class="sb-product-tag">
+      <div class="sb-product-dot" style="background:var(--v)"></div>
+      <span style="font-size:9.5px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.8px">NEXA GO</span>
+    </div>
+    <div class="sb-item" onclick="nav('go-dashboard',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+      Go Dashboard
+    </div>
+    <div class="sb-item" onclick="nav('rides',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      Rides
+    </div>
+    <div class="sb-item" onclick="nav('drivers',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="7" r="4"/><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/></svg>
+      Drivers
+    </div>
+    <div class="sb-item" onclick="nav('delivery',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12H3l4-9h10l4 9h-2"/><path d="M3 12h18v9H3z"/></svg>
+      Delivery
+    </div>
+    <div class="sb-item" onclick="nav('merchants',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+      Merchants
+    </div>
+    <div class="sb-item" onclick="nav('pricing',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
+      Pricing Rules
+    </div>
+  </div>
+
+  <!-- NEXA STAYS -->
+  <div class="sb-divider"></div>
+  <div class="sb-section">
+    <div class="sb-product-tag">
+      <div class="sb-product-dot" style="background:var(--p)"></div>
+      <span style="font-size:9.5px;font-weight:800;color:rgba(255,255,255,.3);letter-spacing:.8px">NEXA STAYS</span>
+    </div>
+    <div class="sb-item" onclick="nav('stays-dashboard',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+      Stays Dashboard
+    </div>
+    <div class="sb-item" onclick="nav('listings',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+      Listings
+    </div>
+    <div class="sb-item" onclick="nav('bookings',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      Bookings
+    </div>
+    <div class="sb-item" onclick="nav('hosts',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Hosts
+      <span class="sb-badge" style="background:var(--p);color:white">5</span>
+    </div>
+  </div>
+
+  <!-- SYSTEM -->
+  <div class="sb-divider"></div>
+  <div class="sb-section">
+    <div class="sb-section-label">System</div>
+    <div class="sb-item" onclick="nav('admins',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Admin Users
+    </div>
+    <div class="sb-item" onclick="nav('config',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      Config
+    </div>
+    <div class="sb-item" onclick="nav('logs',this)">
+      <svg class="sb-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+      Audit Logs
+    </div>
+  </div>
+
+  <div class="sb-bottom">
+    <div class="sb-user">
+      <div class="sb-user-av">S</div>
+      <div>
+        <div class="sb-user-name">Super Admin</div>
+        <div class="sb-user-role">admin@nexa.ma</div>
+      </div>
+    </div>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════════════ MAIN ══ -->
+<div class="main">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div>
+      <div class="topbar-title" id="topbar-title">Overview</div>
+      <div class="topbar-breadcrumb"><span>Nexa Admin</span> › <span id="topbar-sub">Overview</span></div>
+    </div>
+    <div class="topbar-search">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#94A3B8" stroke-width="2.5" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input placeholder="Search users, transactions, rides…">
+    </div>
+    <div class="topbar-actions">
+      <span class="env-pill">● Live</span>
+      <div class="topbar-btn" title="Notifications">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <div class="notif-dot"></div>
+      </div>
+      <div class="topbar-btn" title="Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════ CONTENT PAGES ══════════ -->
+  <div class="content">
+
+    <!-- ▓▓▓ OVERVIEW ▓▓▓ -->
+    <div class="page active" id="page-overview">
+      <div class="section-title">Ecosystem Overview</div>
+      <div class="section-sub">All products — Nexa Pay · Nexa Go · Nexa Stays — real-time summary</div>
+
+      <!-- Alerts -->
+      <div class="alert alert-r">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <strong>3 fraud alerts</strong> detected in the last hour — high-value transfers flagged for review.
+        <button class="btn btn-r btn-sm" style="margin-left:auto" onclick="nav('fraud',document.querySelector('.sb-item[onclick*=fraud])'))">Review Now</button>
+      </div>
+      <div class="alert alert-y">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <strong>12 KYC applications</strong> pending review. Oldest submission: 2 days ago.
+        <button class="btn btn-y btn-sm" style="margin-left:auto" onclick="nav('kyc',document.querySelector('.sb-item[onclick*=kyc])'))">Review KYC</button>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card y">
+          <div class="stat-icon si-y"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>
+          <div class="stat-label">TOTAL VOLUME (MTD)</div>
+          <div class="stat-val">4.2M <span style="font-size:14px;color:var(--mid)">MAD</span></div>
+          <div class="stat-sub"><span class="stat-trend trend-up">↑ 18%</span> vs last month</div>
+        </div>
+        <div class="stat-card v">
+          <div class="stat-icon si-v"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <div class="stat-label">TOTAL USERS</div>
+          <div class="stat-val">38,412</div>
+          <div class="stat-sub"><span class="stat-trend trend-up">↑ 24%</span> +2,140 this week</div>
+        </div>
+        <div class="stat-card g">
+          <div class="stat-icon si-g"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="1" y="3" width="15" height="13" rx="2"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg></div>
+          <div class="stat-label">RIDES TODAY</div>
+          <div class="stat-val">1,847</div>
+          <div class="stat-sub"><span class="stat-trend trend-up">↑ 12%</span> vs yesterday</div>
+        </div>
+        <div class="stat-card b">
+          <div class="stat-icon si-b"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div>
+          <div class="stat-label">STAYS BOOKINGS (MTD)</div>
+          <div class="stat-val">284</div>
+          <div class="stat-sub"><span class="stat-trend trend-up">↑ 31%</span> new hosts +8</div>
+        </div>
+        <div class="stat-card o">
+          <div class="stat-icon si-o"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12H3l4-9h10l4 9h-2"/><rect x="3" y="12" width="18" height="9" rx="2"/></svg></div>
+          <div class="stat-label">DELIVERIES TODAY</div>
+          <div class="stat-val">3,204</div>
+          <div class="stat-sub"><span class="stat-trend trend-up">↑ 8%</span> 412 couriers active</div>
+        </div>
+        <div class="stat-card p">
+          <div class="stat-icon si-p"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div>
+          <div class="stat-label">KYC PENDING</div>
+          <div class="stat-val">12</div>
+          <div class="stat-sub"><span class="stat-trend trend-dn">↑ 3</span> new today</div>
+        </div>
+        <div class="stat-card r">
+          <div class="stat-icon si-r"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div class="stat-label">FRAUD ALERTS</div>
+          <div class="stat-val">3</div>
+          <div class="stat-sub"><span class="stat-trend trend-dn">HIGH</span> needs review</div>
+        </div>
+        <div class="stat-card y">
+          <div class="stat-icon si-y"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+          <div class="stat-label">API UPTIME</div>
+          <div class="stat-val">99.8<span style="font-size:14px">%</span></div>
+          <div class="stat-sub"><span class="stat-trend trend-up">Healthy</span> 3 services</div>
+        </div>
+      </div>
+
+      <!-- Charts row -->
+      <div class="row">
+        <div class="col-2">
+          <div class="card">
+            <div class="card-hdr">
+              <div>
+                <div class="card-title">Revenue by Product</div>
+                <div class="card-sub">Last 7 days · MAD</div>
+              </div>
+              <div class="card-actions">
+                <div class="tabs">
+                  <div class="tab active">7D</div>
+                  <div class="tab">30D</div>
+                  <div class="tab">3M</div>
+                </div>
+              </div>
+            </div>
+            <div class="card-body">
+              <div style="display:flex;gap:12px;margin-bottom:16px">
+                <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mid)"><div style="width:8px;height:8px;border-radius:2px;background:var(--y)"></div>Pay</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mid)"><div style="width:8px;height:8px;border-radius:2px;background:var(--v)"></div>Go</div>
+                <div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--mid)"><div style="width:8px;height:8px;border-radius:2px;background:var(--p)"></div>Stays</div>
+              </div>
+              <div class="chart-bars">
+                <div class="bar-wrap">
+                  <div style="display:flex;flex-direction:column;justify-content:flex-end;height:100px;gap:2px">
+                    <div class="bar" style="height:72px;background:var(--y);opacity:.85"></div>
+                    <div class="bar" style="height:38px;background:var(--v)"></div>
+                    <div class="bar" style="height:16px;background:var(--p)"></div>
+                  </div>
+                  <div class="bar-lbl">Mon</div>
+                </div>
+                <div class="bar-wrap">
+                  <div style="display:flex;flex-direction:column;justify-content:flex-end;height:100px;gap:2px">
+                    <div class="bar" style="height:58px;background:var(--y);opacity:.85"></div>
+                    <div class="bar" style="height:44px;background:var(--v)"></div>
+                    <div class="bar" style="height:20px;background:var(--p)"></div>
+                  </div>
+                  <div class="bar-lbl">Tue</div>
+                </div>
+                <div class="bar-wrap">
+                  <div style="display:flex;flex-direction:column;justify-content:flex-end;height:100px;gap:2px">
+                    <div class="bar" style="height:80px;background:var(--y);opacity:.85"></div>
+                    <div class="bar" style="height:52px;background:var(--v)"></div>
+                    <div class="bar" style="height:24px;background:var(--p)"></div>
+                  </div>
+                  <div class="bar-lbl">Wed</div>
+                </div>
+                <div class="bar-wrap">
+                  <div style="display:flex;flex-direction:column;justify-content:flex-end;height:100px;gap:2px">
+                    <div class="bar" style="height:64px;background:var(--y);opacity:.85"></div>
+                    <div class="bar" style="height:48px;background:var(--v)"></div>
+                    <div class="bar" style="height:18px;background:var(--p)"></div>
+                  </div>
+                  <div class="bar-lbl">Thu</div>
+                </div>
+                <div class="bar-wrap">
+                  <div style="display:flex;flex-direction:column;justify-content:flex-end;height:100px;gap:2px">
+                    <div class="bar" style="height:88px;background:var(--y);opacity:.85"></div>
+                    <div class="bar" style="height:60px;background:var(--v)"></div>
+                    <div class="bar" style="height:28px;background:var(--p)"></div>
+                  </div>
+                  <div class="bar-lbl">Fri</div>
+                </div>
+                <div class="bar-wrap">
+                  <div style="display:flex;flex-direction:column;justify-content:flex-end;height:100px;gap:2px">
+                    <div class="bar" style="height:96px;background:var(--y);opacity:.85"></div>
+                    <div class="bar" style="height:70px;background:var(--v)"></div>
+                    <div class="bar" style="height:32px;background:var(--p)"></div>
+                  </div>
+                  <div class="bar-lbl">Sat</div>
+                </div>
+                <div class="bar-wrap">
+                  <div style="display:flex;flex-direction:column;justify-content:flex-end;height:100px;gap:2px">
+                    <div class="bar" style="height:50px;background:var(--y);opacity:.85"></div>
+                    <div class="bar" style="height:36px;background:var(--v)"></div>
+                    <div class="bar" style="height:14px;background:var(--p)"></div>
+                  </div>
+                  <div class="bar-lbl">Sun</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col-1">
+          <div class="card" style="height:100%">
+            <div class="card-hdr">
+              <div>
+                <div class="card-title">Volume Split</div>
+                <div class="card-sub">By product (MTD)</div>
+              </div>
+            </div>
+            <div class="card-body">
+              <svg viewBox="0 0 120 120" width="120" height="120" style="display:block;margin:0 auto 16px">
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--surf2)" stroke-width="20"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--y)" stroke-width="20" stroke-dasharray="180.96 120.64" stroke-dashoffset="-30.16" transform="rotate(-90 60 60)"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--v)" stroke-width="20" stroke-dasharray="90.48 211.12" stroke-dashoffset="-211.12" transform="rotate(-90 60 60)"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--p)" stroke-width="20" stroke-dasharray="30.16 271.44" stroke-dashoffset="-301.6" transform="rotate(-90 60 60)"/>
+                <text x="60" y="58" text-anchor="middle" font-size="14" font-weight="800" fill="var(--ink)">4.2M</text>
+                <text x="60" y="70" text-anchor="middle" font-size="8" fill="var(--muted)">MAD</text>
+              </svg>
+              <div class="donut-legend">
+                <div class="legend-row"><div class="legend-dot" style="background:var(--y)"></div>Pay <div class="legend-val">60%</div></div>
+                <div class="legend-row"><div class="legend-dot" style="background:var(--v)"></div>Go <div class="legend-val">30%</div></div>
+                <div class="legend-row"><div class="legend-dot" style="background:var(--p)"></div>Stays <div class="legend-val">10%</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tables row -->
+      <div class="row">
+        <div class="col-2">
+          <div class="card">
+            <div class="card-hdr">
+              <div class="card-title">Recent Transactions</div>
+              <div class="card-actions"><button class="btn btn-ghost btn-sm">View all</button></div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>User</th><th>Type</th><th>Amount</th><th>Product</th><th>Status</th><th>Time</th></tr></thead>
+                <tbody>
+                  <tr><td><div class="user-cell"><div class="av av-y">K</div><div><div class="user-name">Karim M.</div><div class="user-id">+212612345678</div></div></div></td><td class="td-muted">P2P Send</td><td><strong>500 MAD</strong></td><td><span class="badge badge-y">Pay</span></td><td><span class="badge badge-g">Success</span></td><td class="td-muted">2 min ago</td></tr>
+                  <tr><td><div class="user-cell"><div class="av av-v">S</div><div><div class="user-name">Sara B.</div><div class="user-id">+212698765432</div></div></div></td><td class="td-muted">Ride Fare</td><td><strong>42 MAD</strong></td><td><span class="badge badge-v">Go</span></td><td><span class="badge badge-g">Success</span></td><td class="td-muted">5 min ago</td></tr>
+                  <tr><td><div class="user-cell"><div class="av av-p">Y</div><div><div class="user-name">Youssef A.</div><div class="user-id">+212655443322</div></div></div></td><td class="td-muted">Booking</td><td><strong>1,200 MAD</strong></td><td><span class="badge badge-p">Stays</span></td><td><span class="badge badge-y">Pending</span></td><td class="td-muted">8 min ago</td></tr>
+                  <tr><td><div class="user-cell"><div class="av av-b">N</div><div><div class="user-name">Nadia R.</div><div class="user-id">+212677889900</div></div></div></td><td class="td-muted">QR Pay</td><td><strong>73.90 MAD</strong></td><td><span class="badge badge-y">Pay</span></td><td><span class="badge badge-g">Success</span></td><td class="td-muted">12 min ago</td></tr>
+                  <tr><td><div class="user-cell"><div class="av av-o">M</div><div><div class="user-name">Mohamed T.</div><div class="user-id">+212644332211</div></div></div></td><td class="td-muted">Withdraw</td><td><strong>2,000 MAD</strong></td><td><span class="badge badge-y">Pay</span></td><td><span class="badge badge-r">Flagged</span></td><td class="td-muted">18 min ago</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-1">
+          <div class="card" style="height:100%">
+            <div class="card-hdr"><div class="card-title">Live Activity</div></div>
+            <div class="card-body" style="padding:12px 16px">
+              <div class="feed-item">
+                <div class="feed-icon" style="background:var(--ys)">🚖</div>
+                <div><div class="feed-text">Ride completed — Casablanca Maârif</div><div class="feed-time">Just now</div></div>
+                <div class="feed-amt" style="color:var(--g)">+42 MAD</div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-icon" style="background:var(--gs)">✓</div>
+                <div><div class="feed-text">KYC approved — Fatima Z.</div><div class="feed-time">2 min ago</div></div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-icon" style="background:var(--vs)">🛵</div>
+                <div><div class="feed-text">Food delivery — Bella Bistro</div><div class="feed-time">3 min ago</div></div>
+                <div class="feed-amt" style="color:var(--g)">+73 MAD</div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-icon" style="background:var(--rs)">⚠</div>
+                <div><div class="feed-text">Fraud alert — large withdrawal</div><div class="feed-time">18 min ago</div></div>
+              </div>
+              <div class="feed-item">
+                <div class="feed-icon" style="background:var(--ps)">🏠</div>
+                <div><div class="feed-text">New booking — Rabat Villa</div><div class="feed-time">22 min ago</div></div>
+                <div class="feed-amt" style="color:var(--g)">+1,200 MAD</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ KYC ▓▓▓ -->
+    <div class="page" id="page-kyc">
+      <div class="section-title">KYC Review</div>
+      <div class="section-sub">Pending identity verifications from <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/pay/admin/kyc/applications</code></div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card y"><div class="stat-label">PENDING REVIEW</div><div class="stat-val">12</div><div class="stat-sub">Awaiting admin action</div></div>
+        <div class="stat-card g"><div class="stat-label">APPROVED TODAY</div><div class="stat-val">28</div><div class="stat-sub"><span class="stat-trend trend-up">↑ 8</span> vs yesterday</div></div>
+        <div class="stat-card r"><div class="stat-label">REJECTED TODAY</div><div class="stat-val">4</div><div class="stat-sub">Blurry docs or mismatch</div></div>
+        <div class="stat-card b"><div class="stat-label">AVG REVIEW TIME</div><div class="stat-val">4.2h</div><div class="stat-sub">Target: &lt; 24h</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr">
+          <div class="card-title">Pending Applications</div>
+          <div class="card-actions">
+            <div class="tabs"><div class="tab active">All</div><div class="tab">CIN</div><div class="tab">Passport</div><div class="tab">License</div></div>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Applicant</th><th>Document</th><th>Doc Type</th><th>OCR</th><th>Selfie</th><th>Submitted</th><th>Risk</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td><div class="user-cell"><div class="av av-y">K</div><div><div class="user-name">Karim Mansouri</div><div class="user-id">USR-8841</div></div></div></td><td class="td-mono">CIN BE123456</td><td><span class="badge badge-n">National ID</span></td><td><span class="badge badge-g">Passed</span></td><td><span class="badge badge-y">Pending</span></td><td class="td-muted">2h ago</td><td><span class="badge badge-g">Low</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-g btn-sm">Approve</button><button class="btn btn-r btn-sm">Reject</button></div></td></tr>
+              <tr><td><div class="user-cell"><div class="av av-v">S</div><div><div class="user-name">Sara Benali</div><div class="user-id">USR-8842</div></div></div></td><td class="td-mono">PP AB9876543</td><td><span class="badge badge-b">Passport</span></td><td><span class="badge badge-g">Passed</span></td><td><span class="badge badge-g">Passed</span></td><td class="td-muted">4h ago</td><td><span class="badge badge-g">Low</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-g btn-sm">Approve</button><button class="btn btn-r btn-sm">Reject</button></div></td></tr>
+              <tr><td><div class="user-cell"><div class="av av-p">A</div><div><div class="user-name">Ahmed Fassi</div><div class="user-id">USR-8843</div></div></div></td><td class="td-mono">CIN CD456789</td><td><span class="badge badge-n">National ID</span></td><td><span class="badge badge-r">Failed</span></td><td><span class="badge badge-r">Mismatch</span></td><td class="td-muted">6h ago</td><td><span class="badge badge-r">High</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-ghost btn-sm">Review</button><button class="btn btn-r btn-sm">Reject</button></div></td></tr>
+              <tr><td><div class="user-cell"><div class="av av-g">N</div><div><div class="user-name">Nadia Chraibi</div><div class="user-id">USR-8844</div></div></div></td><td class="td-mono">DL M112233</td><td><span class="badge badge-o">License</span></td><td><span class="badge badge-g">Passed</span></td><td><span class="badge badge-g">Passed</span></td><td class="td-muted">8h ago</td><td><span class="badge badge-g">Low</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-g btn-sm">Approve</button><button class="btn btn-r btn-sm">Reject</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ RIDES ▓▓▓ -->
+    <div class="page" id="page-rides">
+      <div class="section-title">Rides — Nexa Go</div>
+      <div class="section-sub">Live taxi operations from <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/go/rides</code></div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card v"><div class="stat-label">ACTIVE RIDES</div><div class="stat-val">142</div><div class="stat-sub">Right now</div></div>
+        <div class="stat-card g"><div class="stat-label">COMPLETED TODAY</div><div class="stat-val">1,847</div><div class="stat-sub"><span class="stat-trend trend-up">↑ 12%</span></div></div>
+        <div class="stat-card y"><div class="stat-label">DRIVERS ONLINE</div><div class="stat-val">284</div><div class="stat-sub">Casablanca zone</div></div>
+        <div class="stat-card r"><div class="stat-label">CANCELLATION RATE</div><div class="stat-val">4.2%</div><div class="stat-sub"><span class="stat-trend trend-dn">↑ 0.8%</span> vs avg</div></div>
+      </div>
+      <div class="row">
+        <div class="col-2">
+          <div class="card">
+            <div class="card-hdr"><div class="card-title">Live Ride Feed</div><span class="badge badge-g" style="margin-left:auto">● Live</span></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Ride ID</th><th>Passenger</th><th>Driver</th><th>Route</th><th>Type</th><th>Fare</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="td-mono">RD-9918</td><td>Karim M.</td><td>Omar K.</td><td>Maârif → Morocco Mall</td><td><span class="badge badge-v">Economy</span></td><td>42 MAD</td><td><span class="badge badge-g">In Progress</span></td></tr>
+                  <tr><td class="td-mono">RD-9917</td><td>Sara B.</td><td>Hassan L.</td><td>Anfa → Ain Diab</td><td><span class="badge badge-y">Comfort</span></td><td>68 MAD</td><td><span class="badge badge-b">Pickup</span></td></tr>
+                  <tr><td class="td-mono">RD-9916</td><td>Youssef A.</td><td>Ali M.</td><td>Derb Sultan → CFC</td><td><span class="badge badge-v">Economy</span></td><td>35 MAD</td><td><span class="badge badge-g">Completed</span></td></tr>
+                  <tr><td class="td-mono">RD-9915</td><td>Fatima Z.</td><td>—</td><td>Hay Hassani → Centre</td><td><span class="badge badge-v">Moto</span></td><td>18 MAD</td><td><span class="badge badge-y">Searching</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-1">
+          <div class="card" style="height:100%">
+            <div class="card-hdr"><div class="card-title">Driver Zones</div></div>
+            <div class="card-body">
+              <div style="display:flex;flex-direction:column;gap:10px">
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:700">Maârif</span><span style="color:var(--g);font-weight:700">84 drivers</span></div><div class="progress"><div class="progress-fill" style="width:84%;background:var(--g)"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:700">Ain Diab</span><span style="color:var(--y);font-weight:700">62 drivers</span></div><div class="progress"><div class="progress-fill" style="width:62%;background:var(--y)"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:700">Anfa</span><span style="color:var(--b);font-weight:700">48 drivers</span></div><div class="progress"><div class="progress-fill" style="width:48%;background:var(--b)"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:700">Derb Sultan</span><span style="color:var(--r);font-weight:700">22 drivers</span></div><div class="progress"><div class="progress-fill" style="width:22%;background:var(--r)"></div></div></div>
+                <div><div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px"><span style="font-weight:700">Sidi Maarouf</span><span style="color:var(--mid);font-weight:700">12 drivers</span></div><div class="progress"><div class="progress-fill" style="width:12%;background:var(--mid)"></div></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ FRAUD ▓▓▓ -->
+    <div class="page" id="page-fraud">
+      <div class="section-title">Fraud & Risk</div>
+      <div class="section-sub">Alerts from the Nexa Pay risk engine · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/pay/admin</code></div>
+      <div class="alert alert-r" style="margin-bottom:20px">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        <strong>3 CRITICAL alerts</strong> require immediate action. Accounts have been auto-frozen pending review.
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card r"><div class="stat-label">CRITICAL</div><div class="stat-val">3</div><div class="stat-sub">Auto-frozen accounts</div></div>
+        <div class="stat-card y"><div class="stat-label">MEDIUM RISK</div><div class="stat-val">11</div><div class="stat-sub">Under monitoring</div></div>
+        <div class="stat-card g"><div class="stat-label">RESOLVED TODAY</div><div class="stat-val">7</div><div class="stat-sub">Cleared by team</div></div>
+        <div class="stat-card b"><div class="stat-label">SAR FILINGS</div><div class="stat-val">2</div><div class="stat-sub">This month</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">Active Fraud Alerts</div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>User</th><th>Alert Type</th><th>Amount</th><th>Trigger</th><th>Risk Score</th><th>Account</th><th>Actions</th></tr></thead>
+            <tbody>
+              <tr><td><div class="user-cell"><div class="av av-o">M</div><div><div class="user-name">Mohamed T.</div><div class="user-id">USR-7721</div></div></div></td><td><span class="badge badge-r">Large Withdraw</span></td><td><strong>15,000 MAD</strong></td><td>Velocity rule — 3x daily avg</td><td><div style="display:flex;align-items:center;gap:6px"><div class="risk-bar" style="width:60px"><div class="risk-fill" style="width:90%"></div></div><span style="font-size:11px;font-weight:700;color:var(--r)">90</span></div></td><td><span class="badge badge-r">Frozen</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-ghost btn-sm">Review</button><button class="btn btn-g btn-sm">Unfreeze</button></div></td></tr>
+              <tr><td><div class="user-cell"><div class="av av-v">R</div><div><div class="user-name">Rachid K.</div><div class="user-id">USR-6614</div></div></div></td><td><span class="badge badge-r">Multiple P2P</span></td><td><strong>8,200 MAD</strong></td><td>18 transfers in 2 hours</td><td><div style="display:flex;align-items:center;gap:6px"><div class="risk-bar" style="width:60px"><div class="risk-fill" style="width:78%"></div></div><span style="font-size:11px;font-weight:700;color:var(--o)">78</span></div></td><td><span class="badge badge-r">Frozen</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-ghost btn-sm">Review</button><button class="btn btn-r btn-sm">Block</button></div></td></tr>
+              <tr><td><div class="user-cell"><div class="av av-p">L</div><div><div class="user-name">Laila O.</div><div class="user-id">USR-5503</div></div></div></td><td><span class="badge badge-y">Unusual Login</span></td><td><strong>500 MAD</strong></td><td>New device + new IP</td><td><div style="display:flex;align-items:center;gap:6px"><div class="risk-bar" style="width:60px"><div class="risk-fill" style="width:45%"></div></div><span style="font-size:11px;font-weight:700;color:var(--ya)">45</span></div></td><td><span class="badge badge-y">Monitored</span></td><td><div style="display:flex;gap:5px"><button class="btn btn-ghost btn-sm">Review</button><button class="btn btn-g btn-sm">Clear</button></div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ STAYS DASHBOARD ▓▓▓ -->
+    <div class="page" id="page-stays-dashboard">
+      <div class="section-title">Nexa Stays</div>
+      <div class="section-sub">Listings, bookings, hosts · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/stays/*</code> &amp; <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/admin/stays/*</code></div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card p"><div class="stat-label">ACTIVE LISTINGS</div><div class="stat-val">184</div><div class="stat-sub"><span class="stat-trend trend-up">↑ 12</span> this week</div></div>
+        <div class="stat-card g"><div class="stat-label">BOOKINGS MTD</div><div class="stat-val">284</div><div class="stat-sub"><span class="stat-trend trend-up">↑ 31%</span></div></div>
+        <div class="stat-card y"><div class="stat-label">HOSTS PENDING</div><div class="stat-val">5</div><div class="stat-sub">Verification needed</div></div>
+        <div class="stat-card b"><div class="stat-label">REVENUE MTD</div><div class="stat-val">420K MAD</div><div class="stat-sub">Platform fees</div></div>
+      </div>
+      <div class="row">
+        <div class="col-2">
+          <div class="card">
+            <div class="card-hdr"><div class="card-title">Recent Bookings</div></div>
+            <div class="table-wrap">
+              <table>
+                <thead><tr><th>Booking</th><th>Guest</th><th>Property</th><th>Dates</th><th>Amount</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td class="td-mono">STY-4421</td><td>Karim M.</td><td>Rabat City Villa</td><td>Mar 20–25</td><td><strong>3,600 MAD</strong></td><td><span class="badge badge-g">Confirmed</span></td></tr>
+                  <tr><td class="td-mono">STY-4420</td><td>Sara B.</td><td>Marrakech Riad</td><td>Mar 18–20</td><td><strong>2,400 MAD</strong></td><td><span class="badge badge-y">Pending</span></td></tr>
+                  <tr><td class="td-mono">STY-4419</td><td>Ahmed F.</td><td>Casablanca Penthouse</td><td>Mar 15–17</td><td><strong>1,800 MAD</strong></td><td><span class="badge badge-g">Checked In</span></td></tr>
+                  <tr><td class="td-mono">STY-4418</td><td>Nadia R.</td><td>Agadir Beach Apt</td><td>Mar 12–15</td><td><strong>2,100 MAD</strong></td><td><span class="badge badge-g">Completed</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="col-1">
+          <div class="card" style="height:100%">
+            <div class="card-hdr"><div class="card-title">Host Approvals</div><span class="badge badge-y" style="margin-left:auto">5 pending</span></div>
+            <div class="card-body" style="padding:12px 16px">
+              <div class="feed-item"><div class="feed-icon" style="background:var(--ps)">🏠</div><div><div class="feed-text" style="font-weight:700">Hassan Berrada</div><div class="feed-time">3 listings · Marrakech</div></div><button class="btn btn-g btn-sm">Approve</button></div>
+              <div class="feed-item"><div class="feed-icon" style="background:var(--ps)">🏠</div><div><div class="feed-text" style="font-weight:700">Zineb Tahiri</div><div class="feed-time">1 listing · Agadir</div></div><button class="btn btn-g btn-sm">Approve</button></div>
+              <div class="feed-item"><div class="feed-icon" style="background:var(--rs)">⚠</div><div><div class="feed-text" style="font-weight:700">Omar Alami</div><div class="feed-time">Docs incomplete</div></div><button class="btn btn-r btn-sm">Reject</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ CONFIG ▓▓▓ -->
+    <div class="page" id="page-config">
+      <div class="section-title">System Configuration</div>
+      <div class="section-sub">Global settings across Nexa Pay, Go, and Stays</div>
+      <div class="row">
+        <div class="col-1">
+          <div class="card">
+            <div class="card-hdr"><div class="card-title">Nexa Pay — Limits</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">Daily send limit (unverified)</div><div style="font-size:11px;color:var(--muted)">/api/v1/pay/config</div></div><div style="background:var(--surf2);border:1px solid var(--surf3);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800">500 MAD</div></div>
+              <div class="divider" style="height:1px;background:var(--surf2)"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">Daily send limit (KYC approved)</div></div><div style="background:var(--surf2);border:1px solid var(--surf3);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800">50,000 MAD</div></div>
+              <div class="divider" style="height:1px;background:var(--surf2)"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">QR expiry (seconds)</div></div><div style="background:var(--surf2);border:1px solid var(--surf3);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800">300</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-1">
+          <div class="card">
+            <div class="card-hdr"><div class="card-title">Nexa Go — Pricing</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:14px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">Base fare (Economy)</div></div><div style="background:var(--surf2);border:1px solid var(--surf3);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800">15 MAD</div></div>
+              <div class="divider" style="height:1px;background:var(--surf2)"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">Per km rate (Economy)</div></div><div style="background:var(--surf2);border:1px solid var(--surf3);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800">3.5 MAD</div></div>
+              <div class="divider" style="height:1px;background:var(--surf2)"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">Platform commission</div></div><div style="background:var(--surf2);border:1px solid var(--surf3);border-radius:8px;padding:6px 12px;font-size:13px;font-weight:800">10%</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="col-1">
+          <div class="card">
+            <div class="card-hdr"><div class="card-title">Feature Flags</div></div>
+            <div class="card-body" style="display:flex;flex-direction:column;gap:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">NFC Payments</div><div style="font-size:10.5px;color:var(--muted)">Nexa Pay · hardware</div></div><div class="toggle off" onclick="this.classList.toggle('off')"><div class="toggle-knob"></div></div></div>
+              <div class="divider" style="height:1px;background:var(--surf2)"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">Surge Pricing</div><div style="font-size:10.5px;color:var(--muted)">Nexa Go rides</div></div><div class="toggle" onclick="this.classList.toggle('off')"><div class="toggle-knob"></div></div></div>
+              <div class="divider" style="height:1px;background:var(--surf2)"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">Stays Public Site</div><div style="font-size:10.5px;color:var(--muted)">nexa_stay_web_public</div></div><div class="toggle off" onclick="this.classList.toggle('off')"><div class="toggle-knob"></div></div></div>
+              <div class="divider" style="height:1px;background:var(--surf2)"></div>
+              <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:12.5px;font-weight:700">Go Admin Dashboard</div><div style="font-size:10.5px;color:var(--muted)">nexa_go_web_app</div></div><div class="toggle off" onclick="this.classList.toggle('off')"><div class="toggle-knob"></div></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ DELIVERY ▓▓▓ -->
+    <div class="page" id="page-delivery">
+      <div class="section-title">Delivery Operations</div>
+      <div class="section-sub">Food &amp; parcel deliveries · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/go/delivery/orders</code></div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr)">
+        <div class="stat-card o"><div class="stat-label">ACTIVE ORDERS</div><div class="stat-val">388</div><div class="stat-sub">Right now</div></div>
+        <div class="stat-card g"><div class="stat-label">COMPLETED TODAY</div><div class="stat-val">3,204</div><div class="stat-sub"><span class="stat-trend trend-up">↑ 8%</span></div></div>
+        <div class="stat-card v"><div class="stat-label">COURIERS ONLINE</div><div class="stat-val">412</div><div class="stat-sub">Casablanca</div></div>
+        <div class="stat-card y"><div class="stat-label">AVG DELIVERY TIME</div><div class="stat-val">24 min</div><div class="stat-sub">Target: &lt; 30 min</div></div>
+      </div>
+      <div class="card">
+        <div class="card-hdr"><div class="card-title">Active Delivery Orders</div><div class="card-actions"><div class="tabs"><div class="tab active">All</div><div class="tab">Food</div><div class="tab">Parcels</div></div></div></div>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Order ID</th><th>Customer</th><th>Merchant</th><th>Courier</th><th>Type</th><th>ETA</th><th>Status</th></tr></thead>
+            <tbody>
+              <tr><td class="td-mono">DL-8841</td><td>Karim M.</td><td>Bella Bistro</td><td>Youssef A.</td><td><span class="badge badge-o">Food</span></td><td>8 min</td><td><span class="badge badge-b">En Route</span></td></tr>
+              <tr><td class="td-mono">DL-8840</td><td>Sara B.</td><td>Maârif Tech Hub</td><td>Ali K.</td><td><span class="badge badge-y">Parcel</span></td><td>14 min</td><td><span class="badge badge-y">Pickup</span></td></tr>
+              <tr><td class="td-mono">DL-8839</td><td>Nadia R.</td><td>Pizza Palace</td><td>—</td><td><span class="badge badge-o">Food</span></td><td>—</td><td><span class="badge badge-r">No Courier</span></td></tr>
+              <tr><td class="td-mono">DL-8838</td><td>Ahmed F.</td><td>Burger Hub</td><td>Omar T.</td><td><span class="badge badge-o">Food</span></td><td>22 min</td><td><span class="badge badge-g">Delivered</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▓▓▓ GENERIC PLACEHOLDER PAGES ▓▓▓ -->
+    <div class="page" id="page-activity"><div class="section-title">Live Activity</div><div class="section-sub">Real-time stream from all Nexa services</div><div class="alert alert-g"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>All 3 services healthy · NestJS at <code>/api/v1</code> · 99.8% uptime</div><div class="card"><div class="card-hdr"><div class="card-title">Event Stream</div><span class="badge badge-g" style="margin-left:auto">● Streaming</span></div><div class="card-body"><div class="feed-item"><div class="feed-icon" style="background:var(--ys)">🚖</div><div><div class="feed-text">RD-9918 completed — 42 MAD — Maârif → Morocco Mall</div><div class="feed-time">just now</div></div></div><div class="feed-item"><div class="feed-icon" style="background:var(--gs)">✓</div><div><div class="feed-text">KYC approved — Fatima Zahra (USR-8841)</div><div class="feed-time">1 min ago</div></div></div><div class="feed-item"><div class="feed-icon" style="background:var(--vs)">🛵</div><div><div class="feed-text">DL-8841 picked up — Bella Bistro → Anfa</div><div class="feed-time">2 min ago</div></div></div><div class="feed-item"><div class="feed-icon" style="background:var(--ps)">🏠</div><div><div class="feed-text">STY-4421 confirmed — Rabat City Villa · 3,600 MAD</div><div class="feed-time">5 min ago</div></div></div><div class="feed-item"><div class="feed-icon" style="background:var(--rs)">⚠</div><div><div class="feed-text">Fraud alert — USR-7721 large withdrawal flagged</div><div class="feed-time">18 min ago</div></div></div></div></div></div>
+    <div class="page" id="page-users"><div class="section-title">All Users</div><div class="section-sub">Unified identity — one account across Pay, Go, Stays · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/users</code></div><div class="stats-grid" style="grid-template-columns:repeat(4,1fr)"><div class="stat-card v"><div class="stat-label">TOTAL USERS</div><div class="stat-val">38,412</div><div class="stat-sub"><span class="stat-trend trend-up">↑ 24%</span></div></div><div class="stat-card g"><div class="stat-label">KYC VERIFIED</div><div class="stat-val">24,180</div><div class="stat-sub">63% of users</div></div><div class="stat-card y"><div class="stat-label">DRIVERS</div><div class="stat-val">1,842</div><div class="stat-sub">284 online now</div></div><div class="stat-card o"><div class="stat-label">COURIERS</div><div class="stat-val">912</div><div class="stat-sub">412 active today</div></div></div><div class="card"><div class="card-hdr"><div class="card-title">User Directory</div><div class="card-actions"><div class="tabs"><div class="tab active">All</div><div class="tab">Consumers</div><div class="tab">Drivers</div><div class="tab">Couriers</div><div class="tab">Hosts</div></div></div></div><div class="table-wrap"><table><thead><tr><th>User</th><th>Roles</th><th>KYC</th><th>Wallet Balance</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead><tbody><tr><td><div class="user-cell"><div class="av av-y">K</div><div><div class="user-name">Karim Mansouri</div><div class="user-id">+212612345678</div></div></div></td><td><span class="badge badge-n">Consumer</span></td><td><span class="badge badge-g">Verified</span></td><td>1,240 MAD</td><td class="td-muted">Jan 2025</td><td><span class="badge badge-g">Active</span></td><td><button class="btn btn-ghost btn-sm">View</button></td></tr><tr><td><div class="user-cell"><div class="av av-v">O</div><div><div class="user-name">Omar Khalil</div><div class="user-id">+212677889900</div></div></div></td><td><span class="badge badge-v">Driver</span></td><td><span class="badge badge-g">Verified</span></td><td>3,850 MAD</td><td class="td-muted">Mar 2024</td><td><span class="badge badge-g">Active</span></td><td><button class="btn btn-ghost btn-sm">View</button></td></tr><tr><td><div class="user-cell"><div class="av av-o">Y</div><div><div class="user-name">Youssef Amrani</div><div class="user-id">+212655443322</div></div></div></td><td><span class="badge badge-o">Courier</span></td><td><span class="badge badge-g">Verified</span></td><td>920 MAD</td><td class="td-muted">Jun 2024</td><td><span class="badge badge-g">Active</span></td><td><button class="btn btn-ghost btn-sm">View</button></td></tr><tr><td><div class="user-cell"><div class="av av-p">H</div><div><div class="user-name">Hassan Berrada</div><div class="user-id">+212644332211</div></div></div></td><td><span class="badge badge-p">Host</span></td><td><span class="badge badge-y">Pending</span></td><td>—</td><td class="td-muted">Feb 2025</td><td><span class="badge badge-y">Review</span></td><td><button class="btn btn-ghost btn-sm">View</button></td></tr></tbody></table></div></div></div>
+    <div class="page" id="page-pay-dashboard"><div class="section-title">Nexa Pay Dashboard</div><div class="section-sub">Wallet operations, P2P, QR/NFC, settlements · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/pay/*</code></div><div class="stats-grid" style="grid-template-columns:repeat(4,1fr)"><div class="stat-card y"><div class="stat-label">VOLUME TODAY</div><div class="stat-val">840K MAD</div><div class="stat-sub"><span class="stat-trend trend-up">↑ 18%</span></div></div><div class="stat-card g"><div class="stat-label">P2P TRANSFERS</div><div class="stat-val">4,812</div><div class="stat-sub">Today</div></div><div class="stat-card b"><div class="stat-label">QR PAYMENTS</div><div class="stat-val">1,240</div><div class="stat-sub">Active merchants: 84</div></div><div class="stat-card v"><div class="stat-label">TOTAL WALLETS</div><div class="stat-val">38,412</div><div class="stat-sub">Double-entry ledger</div></div></div><div class="alert alert-y"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>NFC payments are <strong>disabled</strong> (hardware integration pending). Enable in Config → Feature Flags.</div></div>
+    <div class="page" id="page-transactions"><div class="section-title">Transactions</div><div class="section-sub">All ledger movements · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/pay/transactions</code> &amp; <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/pay/admin</code></div><div class="card"><div class="card-hdr"><div class="card-title">Transaction Log</div><div class="card-actions"><div class="tabs"><div class="tab active">All</div><div class="tab">P2P</div><div class="tab">QR</div><div class="tab">Top-up</div><div class="tab">Withdraw</div></div></div></div><div class="table-wrap"><table><thead><tr><th>TXN ID</th><th>From</th><th>To</th><th>Type</th><th>Amount</th><th>Fee</th><th>Status</th><th>Time</th></tr></thead><tbody><tr><td class="td-mono">TXN-44821</td><td>Karim M.</td><td>Sara B.</td><td><span class="badge badge-b">P2P</span></td><td><strong>500 MAD</strong></td><td>0 MAD</td><td><span class="badge badge-g">Success</span></td><td class="td-muted">2 min ago</td></tr><tr><td class="td-mono">TXN-44820</td><td>Nadia R.</td><td>Bella Bistro</td><td><span class="badge badge-v">QR Pay</span></td><td><strong>73.90 MAD</strong></td><td>1.5 MAD</td><td><span class="badge badge-g">Success</span></td><td class="td-muted">5 min ago</td></tr><tr><td class="td-mono">TXN-44819</td><td>Mohamed T.</td><td>Bank</td><td><span class="badge badge-o">Withdraw</span></td><td><strong>15,000 MAD</strong></td><td>25 MAD</td><td><span class="badge badge-r">Flagged</span></td><td class="td-muted">18 min ago</td></tr><tr><td class="td-mono">TXN-44818</td><td>Top-up</td><td>Youssef A.</td><td><span class="badge badge-g">Top-up</span></td><td><strong>200 MAD</strong></td><td>0 MAD</td><td><span class="badge badge-g">Success</span></td><td class="td-muted">24 min ago</td></tr></tbody></table></div></div></div>
+    <div class="page" id="page-wallets"><div class="section-title">Wallets</div><div class="section-sub">Double-entry ledger · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/wallets</code></div><div class="stats-grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat-card y"><div class="stat-label">TOTAL FLOAT</div><div class="stat-val">12.4M MAD</div><div class="stat-sub">In all wallets</div></div><div class="stat-card g"><div class="stat-label">ACTIVE WALLETS</div><div class="stat-val">38,412</div></div><div class="stat-card b"><div class="stat-label">AVG BALANCE</div><div class="stat-val">322 MAD</div></div></div></div>
+    <div class="page" id="page-settlements"><div class="section-title">Settlements</div><div class="section-sub">Driver, courier, and merchant payouts</div><div class="stats-grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat-card y"><div class="stat-label">PENDING PAYOUTS</div><div class="stat-val">284,000 MAD</div><div class="stat-sub">Next batch: Tuesday</div></div><div class="stat-card g"><div class="stat-label">SETTLED THIS WEEK</div><div class="stat-val">1.2M MAD</div></div><div class="stat-card v"><div class="stat-label">RECIPIENTS</div><div class="stat-val">2,754</div><div class="stat-sub">Drivers + couriers + merchants</div></div></div></div>
+    <div class="page" id="page-go-dashboard"><div class="section-title">Go Dashboard</div><div class="section-sub">Rides + delivery overview · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/go/*</code></div><div class="stats-grid" style="grid-template-columns:repeat(4,1fr)"><div class="stat-card v"><div class="stat-label">RIDES TODAY</div><div class="stat-val">1,847</div><div class="stat-sub"><span class="stat-trend trend-up">↑ 12%</span></div></div><div class="stat-card o"><div class="stat-label">DELIVERIES TODAY</div><div class="stat-val">3,204</div></div><div class="stat-card y"><div class="stat-label">ACTIVE DRIVERS</div><div class="stat-val">284</div></div><div class="stat-card g"><div class="stat-label">GO REVENUE MTD</div><div class="stat-val">1.26M MAD</div></div></div></div>
+    <div class="page" id="page-drivers"><div class="section-title">Drivers</div><div class="section-sub">All taxi drivers · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/go/drivers</code></div><div class="stats-grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat-card y"><div class="stat-label">TOTAL DRIVERS</div><div class="stat-val">1,842</div></div><div class="stat-card g"><div class="stat-label">ONLINE NOW</div><div class="stat-val">284</div></div><div class="stat-card r"><div class="stat-label">PENDING APPROVAL</div><div class="stat-val">18</div><div class="stat-sub">From /go/registration</div></div></div></div>
+    <div class="page" id="page-merchants"><div class="section-title">Merchants</div><div class="section-sub">Restaurants &amp; stores · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/go/delivery/merchants</code></div><div class="stats-grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat-card o"><div class="stat-label">ACTIVE MERCHANTS</div><div class="stat-val">214</div></div><div class="stat-card g"><div class="stat-label">ORDERS TODAY</div><div class="stat-val">3,204</div></div><div class="stat-card y"><div class="stat-label">PENDING ONBOARDING</div><div class="stat-val">8</div></div></div></div>
+    <div class="page" id="page-pricing"><div class="section-title">Pricing Rules</div><div class="section-sub">Fare tables, commissions, surge · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/go/rides/pricing</code></div><div class="card"><div class="card-hdr"><div class="card-title">Vehicle Type Rates</div></div><div class="table-wrap"><table><thead><tr><th>Type</th><th>Base Fare</th><th>Per km</th><th>Per min</th><th>Commission</th><th>Min Fare</th></tr></thead><tbody><tr><td><span class="badge badge-v">Economy</span></td><td>15 MAD</td><td>3.5 MAD</td><td>0.5 MAD</td><td>10%</td><td>20 MAD</td></tr><tr><td><span class="badge badge-y">Comfort</span></td><td>25 MAD</td><td>5.0 MAD</td><td>0.8 MAD</td><td>12%</td><td>35 MAD</td></tr><tr><td><span class="badge badge-o">Moto</span></td><td>8 MAD</td><td>2.0 MAD</td><td>0.3 MAD</td><td>10%</td><td>12 MAD</td></tr></tbody></table></div></div></div>
+    <div class="page" id="page-listings"><div class="section-title">Listings</div><div class="section-sub">All properties · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/admin/stays/listings</code></div><div class="stats-grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat-card p"><div class="stat-label">ACTIVE LISTINGS</div><div class="stat-val">184</div></div><div class="stat-card y"><div class="stat-label">PENDING APPROVAL</div><div class="stat-val">9</div></div><div class="stat-card r"><div class="stat-label">REPORTED</div><div class="stat-val">2</div></div></div></div>
+    <div class="page" id="page-bookings"><div class="section-title">Bookings</div><div class="section-sub">All reservations · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/admin/stays/bookings</code></div><div class="stats-grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat-card p"><div class="stat-label">BOOKINGS MTD</div><div class="stat-val">284</div></div><div class="stat-card g"><div class="stat-label">CONFIRMED</div><div class="stat-val">241</div></div><div class="stat-card y"><div class="stat-label">PENDING</div><div class="stat-val">43</div></div></div></div>
+    <div class="page" id="page-hosts"><div class="section-title">Hosts</div><div class="section-sub">Host verification · <code style="font-size:11px;background:var(--surf2);padding:2px 6px;border-radius:4px">/api/v1/admin/stays/hosts</code></div><div class="stats-grid" style="grid-template-columns:repeat(3,1fr)"><div class="stat-card p"><div class="stat-label">VERIFIED HOSTS</div><div class="stat-val">128</div></div><div class="stat-card y"><div class="stat-label">PENDING REVIEW</div><div class="stat-val">5</div></div><div class="stat-card g"><div class="stat-label">AVG LISTINGS/HOST</div><div class="stat-val">1.4</div></div></div></div>
+    <div class="page" id="page-admins"><div class="section-title">Admin Users</div><div class="section-sub">Staff accounts with dashboard access</div><div class="card"><div class="card-hdr"><div class="card-title">Admin Accounts</div><div class="card-actions"><button class="btn btn-dark btn-sm">+ Invite Admin</button></div></div><div class="table-wrap"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Last Login</th><th>Status</th></tr></thead><tbody><tr><td><div class="user-cell"><div class="av av-y">S</div><div><div class="user-name">Super Admin</div></div></div></td><td class="td-muted">admin@nexa.ma</td><td><span class="badge badge-r">Super Admin</span></td><td class="td-muted">Just now</td><td><span class="badge badge-g">Active</span></td></tr><tr><td><div class="user-cell"><div class="av av-v">C</div><div><div class="user-name">Compliance Officer</div></div></div></td><td class="td-muted">compliance@nexa.ma</td><td><span class="badge badge-v">Compliance</span></td><td class="td-muted">1h ago</td><td><span class="badge badge-g">Active</span></td></tr><tr><td><div class="user-cell"><div class="av av-b">O</div><div><div class="user-name">Go Operations</div></div></div></td><td class="td-muted">ops@nexa.ma</td><td><span class="badge badge-b">Operations</span></td><td class="td-muted">3h ago</td><td><span class="badge badge-g">Active</span></td></tr></tbody></table></div></div></div>
+    <div class="page" id="page-logs"><div class="section-title">Audit Logs</div><div class="section-sub">All admin actions — immutable log</div><div class="card"><div class="card-hdr"><div class="card-title">Recent Actions</div></div><div class="table-wrap"><table><thead><tr><th>Action</th><th>Admin</th><th>Target</th><th>IP</th><th>Time</th></tr></thead><tbody><tr><td><span class="badge badge-g">KYC Approved</span></td><td>Super Admin</td><td>USR-8841 Fatima Z.</td><td class="td-mono">105.158.x.x</td><td class="td-muted">5 min ago</td></tr><tr><td><span class="badge badge-r">Account Frozen</span></td><td>Compliance</td><td>USR-7721 Mohamed T.</td><td class="td-mono">105.158.x.x</td><td class="td-muted">20 min ago</td></tr><tr><td><span class="badge badge-y">Config Changed</span></td><td>Super Admin</td><td>Surge pricing enabled</td><td class="td-mono">105.158.x.x</td><td class="td-muted">1h ago</td></tr><tr><td><span class="badge badge-v">Host Approved</span></td><td>Go Operations</td><td>HOST-221 Hassan B.</td><td class="td-mono">105.158.x.x</td><td class="td-muted">2h ago</td></tr></tbody></table></div></div></div>
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<script>
+const pages = {
+  overview:'Overview', activity:'Live Activity', users:'All Users',
+  'pay-dashboard':'Pay Dashboard', kyc:'KYC Review', transactions:'Transactions',
+  wallets:'Wallets', fraud:'Fraud & Risk', settlements:'Settlements',
+  'go-dashboard':'Go Dashboard', rides:'Rides', drivers:'Drivers',
+  delivery:'Delivery', merchants:'Merchants', pricing:'Pricing Rules',
+  'stays-dashboard':'Stays Dashboard', listings:'Listings', bookings:'Bookings',
+  hosts:'Hosts', admins:'Admin Users', config:'Configuration', logs:'Audit Logs'
+};
+
+function nav(id, el) {
+  // Hide all pages
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  // Show target
+  const pg = document.getElementById('page-' + id);
+  if (pg) pg.classList.add('active');
+  // Update sidebar active
+  document.querySelectorAll('.sb-item').forEach(i => i.classList.remove('active'));
+  if (el) el.classList.add('active');
+  // Update topbar
+  const title = pages[id] || id;
+  document.getElementById('topbar-title').textContent = title;
+  document.getElementById('topbar-sub').textContent = title;
+}
+
+// Tab clicks
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', function() {
+    this.closest('.tabs').querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    this.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

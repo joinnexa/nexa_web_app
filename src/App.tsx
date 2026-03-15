@@ -1,6 +1,7 @@
-import { Routes, Route } from 'react-router-dom'
-import { Sidebar } from './components/Sidebar'
-import { Topbar } from './components/Topbar'
+import { Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider } from './contexts/AuthContext'
+import { ProtectedLayout } from './components/ProtectedLayout'
+import { LoginPage } from './pages/LoginPage'
 import { Overview } from './pages/Overview'
 import { LiveActivity } from './pages/LiveActivity'
 import { AllUsers } from './pages/AllUsers'
@@ -26,37 +27,35 @@ import { AuditLogs } from './pages/AuditLogs'
 
 export default function App() {
   return (
-    <>
-      <Sidebar />
-      <div className="main">
-        <Topbar />
-        <div className="content">
-          <Routes>
-            <Route path="/" element={<Overview />} />
-            <Route path="/activity" element={<LiveActivity />} />
-            <Route path="/users" element={<AllUsers />} />
-            <Route path="/pay" element={<PayDashboard />} />
-            <Route path="/kyc" element={<KycReview />} />
-            <Route path="/transactions" element={<Transactions />} />
-            <Route path="/wallets" element={<Wallets />} />
-            <Route path="/fraud" element={<FraudRisk />} />
-            <Route path="/settlements" element={<Settlements />} />
-            <Route path="/go" element={<GoDashboard />} />
-            <Route path="/rides" element={<Rides />} />
-            <Route path="/drivers" element={<Drivers />} />
-            <Route path="/delivery" element={<Delivery />} />
-            <Route path="/merchants" element={<Merchants />} />
-            <Route path="/pricing" element={<PricingRules />} />
-            <Route path="/stays" element={<StaysDashboard />} />
-            <Route path="/listings" element={<Listings />} />
-            <Route path="/bookings" element={<Bookings />} />
-            <Route path="/hosts" element={<Hosts />} />
-            <Route path="/admins" element={<AdminUsers />} />
-            <Route path="/config" element={<Config />} />
-            <Route path="/logs" element={<AuditLogs />} />
-          </Routes>
-        </div>
-      </div>
-    </>
+    <AuthProvider>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route element={<ProtectedLayout />}>
+          <Route path="/" element={<Overview />} />
+          <Route path="/activity" element={<LiveActivity />} />
+          <Route path="/users" element={<AllUsers />} />
+          <Route path="/pay" element={<PayDashboard />} />
+          <Route path="/kyc" element={<KycReview />} />
+          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/wallets" element={<Wallets />} />
+          <Route path="/fraud" element={<FraudRisk />} />
+          <Route path="/settlements" element={<Settlements />} />
+          <Route path="/go" element={<GoDashboard />} />
+          <Route path="/rides" element={<Rides />} />
+          <Route path="/drivers" element={<Drivers />} />
+          <Route path="/delivery" element={<Delivery />} />
+          <Route path="/merchants" element={<Merchants />} />
+          <Route path="/pricing" element={<PricingRules />} />
+          <Route path="/stays" element={<StaysDashboard />} />
+          <Route path="/listings" element={<Listings />} />
+          <Route path="/bookings" element={<Bookings />} />
+          <Route path="/hosts" element={<Hosts />} />
+          <Route path="/admins" element={<AdminUsers />} />
+          <Route path="/config" element={<Config />} />
+          <Route path="/logs" element={<AuditLogs />} />
+        </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </AuthProvider>
   )
 }

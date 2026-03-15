@@ -1,26 +1,77 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { api } from '../api'
+import type { AdminTransaction } from '../api/types'
+import { useDashboardStats } from '../hooks/useDashboardStats'
+
+function timeAgo(iso: string) {
+  const d = new Date(iso)
+  const sec = Math.floor((Date.now() - d.getTime()) / 1000)
+  if (sec < 60) return 'Just now'
+  if (sec < 3600) return `${Math.floor(sec / 60)} min ago`
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`
+  return d.toLocaleDateString()
+}
+
+function formatVolume(n: number) {
+  if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
+  if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`
+  return String(n)
+}
 
 export function Overview() {
+  const { pay, stays, loading, error } = useDashboardStats()
+  const [recentTx, setRecentTx] = useState<AdminTransaction[]>([])
+  const flagged = pay?.flaggedTransactions ?? 0
+  const pendingKyc = pay?.pendingKyc ?? 0
+
+  useEffect(() => {
+    api.TRANSACTIONS.getList({ limit: 5 })
+      .then((data) => setRecentTx(Array.isArray(data) ? data : (data as { data?: AdminTransaction[] }).data ?? []))
+      .catch(() => {})
+  }, [])
+
+  if (loading && !pay) {
+    return (
+      <>
+        <div className="section-title">Ecosystem Overview</div>
+        <div className="section-sub">Loading…</div>
+      </>
+    )
+  }
+  if (error && !pay) {
+    return (
+      <>
+        <div className="section-title">Ecosystem Overview</div>
+        <div className="alert alert-r">{error}</div>
+      </>
+    )
+  }
+
   return (
     <>
       <div className="section-title">Ecosystem Overview</div>
       <div className="section-sub">All products — Nexa Pay · Nexa Go · Nexa Stays — real-time summary</div>
 
-      <div className="alert alert-r">
-        <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-          <line x1={12} y1={9} x2={12} y2={13} /><line x1={12} y1={17} x2={12.01} y2={17} />
-        </svg>
-        <strong>3 fraud alerts</strong> detected in the last hour — high-value transfers flagged for review.
-        <Link to="/fraud" className="btn btn-r btn-sm" style={{ marginLeft: 'auto' }}>Review Now</Link>
-      </div>
-      <div className="alert alert-y">
-        <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
-          <circle cx={12} cy={12} r={10} /><line x1={12} y1={8} x2={12} y2={12} /><line x1={12} y1={16} x2={12.01} y2={16} />
-        </svg>
-        <strong>12 KYC applications</strong> pending review. Oldest submission: 2 days ago.
-        <Link to="/kyc" className="btn btn-y btn-sm" style={{ marginLeft: 'auto' }}>Review KYC</Link>
-      </div>
+      {flagged > 0 && (
+        <div className="alert alert-r">
+          <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+            <line x1={12} y1={9} x2={12} y2={13} /><line x1={12} y1={17} x2={12.01} y2={17} />
+          </svg>
+          <strong>{flagged} fraud alert{flagged !== 1 ? 's' : ''}</strong> — high-value transfers flagged for review.
+          <Link to="/fraud" className="btn btn-r btn-sm" style={{ marginLeft: 'auto' }}>Review Now</Link>
+        </div>
+      )}
+      {pendingKyc > 0 && (
+        <div className="alert alert-y">
+          <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} strokeLinecap="round">
+            <circle cx={12} cy={12} r={10} /><line x1={12} y1={8} x2={12} y2={12} /><line x1={12} y1={16} x2={12.01} y2={16} />
+          </svg>
+          <strong>{pendingKyc} KYC application{pendingKyc !== 1 ? 's' : ''}</strong> pending review.
+          <Link to="/kyc" className="btn btn-y btn-sm" style={{ marginLeft: 'auto' }}>Review KYC</Link>
+        </div>
+      )}
 
       <div className="stats-grid">
         <div className="stat-card y">
@@ -30,8 +81,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">TOTAL VOLUME (MTD)</div>
-          <div className="stat-val">4.2M <span style={{ fontSize: 14, color: 'var(--mid)' }}>MAD</span></div>
-          <div className="stat-sub"><span className="stat-trend trend-up">↑ 18%</span> vs last month</div>
+          <div className="stat-val">{pay ? formatVolume(pay.dailyVolume) : '—'} <span style={{ fontSize: 14, color: 'var(--mid)' }}>MAD</span></div>
+          <div className="stat-sub"><span className="stat-trend trend-up">Daily</span> volume</div>
         </div>
         <div className="stat-card v">
           <div className="stat-icon si-v">
@@ -40,8 +91,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">TOTAL USERS</div>
-          <div className="stat-val">38,412</div>
-          <div className="stat-sub"><span className="stat-trend trend-up">↑ 24%</span> +2,140 this week</div>
+          <div className="stat-val">{pay?.totalUsers != null ? pay.totalUsers.toLocaleString() : '—'}</div>
+          <div className="stat-sub">Verified: {pay?.verifiedUsers != null ? pay.verifiedUsers.toLocaleString() : '—'}</div>
         </div>
         <div className="stat-card g">
           <div className="stat-icon si-g">
@@ -50,8 +101,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">RIDES TODAY</div>
-          <div className="stat-val">1,847</div>
-          <div className="stat-sub"><span className="stat-trend trend-up">↑ 12%</span> vs yesterday</div>
+          <div className="stat-val">—</div>
+          <div className="stat-sub">No API yet</div>
         </div>
         <div className="stat-card b">
           <div className="stat-icon si-b">
@@ -60,8 +111,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">STAYS BOOKINGS (MTD)</div>
-          <div className="stat-val">284</div>
-          <div className="stat-sub"><span className="stat-trend trend-up">↑ 31%</span> new hosts +8</div>
+          <div className="stat-val">{stays?.bookingsMtd != null ? stays.bookingsMtd.toLocaleString() : '—'}</div>
+          <div className="stat-sub">Listings: {stays?.activeListings ?? '—'}</div>
         </div>
         <div className="stat-card o">
           <div className="stat-icon si-o">
@@ -70,8 +121,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">DELIVERIES TODAY</div>
-          <div className="stat-val">3,204</div>
-          <div className="stat-sub"><span className="stat-trend trend-up">↑ 8%</span> 412 couriers active</div>
+          <div className="stat-val">—</div>
+          <div className="stat-sub">No API yet</div>
         </div>
         <div className="stat-card p">
           <div className="stat-icon si-p">
@@ -80,8 +131,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">KYC PENDING</div>
-          <div className="stat-val">12</div>
-          <div className="stat-sub"><span className="stat-trend trend-dn">↑ 3</span> new today</div>
+          <div className="stat-val">{pay?.pendingKyc != null ? pay.pendingKyc : '—'}</div>
+          <div className="stat-sub">Awaiting review</div>
         </div>
         <div className="stat-card r">
           <div className="stat-icon si-r">
@@ -90,8 +141,8 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">FRAUD ALERTS</div>
-          <div className="stat-val">3</div>
-          <div className="stat-sub"><span className="stat-trend trend-dn">HIGH</span> needs review</div>
+          <div className="stat-val">{pay?.flaggedTransactions != null ? pay.flaggedTransactions : '—'}</div>
+          <div className="stat-sub">{flagged > 0 ? 'Needs review' : 'Clear'}</div>
         </div>
         <div className="stat-card y">
           <div className="stat-icon si-y">
@@ -99,9 +150,9 @@ export function Overview() {
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
             </svg>
           </div>
-          <div className="stat-label">API UPTIME</div>
-          <div className="stat-val">99.8<span style={{ fontSize: 14 }}>%</span></div>
-          <div className="stat-sub"><span className="stat-trend trend-up">Healthy</span> 3 services</div>
+          <div className="stat-label">API</div>
+          <div className="stat-val">{pay?.systemStatus?.api === 'healthy' ? 'OK' : '—'}</div>
+          <div className="stat-sub">{pay?.successRate != null ? `${pay.successRate}% success` : 'Health'}</div>
         </div>
       </div>
 
@@ -180,34 +231,26 @@ export function Overview() {
           <div className="card">
             <div className="card-hdr">
               <div className="card-title">Recent Transactions</div>
-              <div className="card-actions"><button type="button" className="btn btn-ghost btn-sm">View all</button></div>
+              <div className="card-actions"><Link to="/transactions" className="btn btn-ghost btn-sm">View all</Link></div>
             </div>
             <div className="table-wrap">
               <table>
                 <thead>
-                  <tr><th>User</th><th>Type</th><th>Amount</th><th>Product</th><th>Status</th><th>Time</th></tr>
+                  <tr><th>Ref</th><th>Type</th><th>Amount</th><th>Status</th><th>Time</th></tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td><div className="user-cell"><div className="av av-y">K</div><div><div className="user-name">Karim M.</div><div className="user-id">+212612345678</div></div></div></td>
-                    <td className="td-muted">P2P Send</td><td><strong>500 MAD</strong></td><td><span className="badge badge-y">Pay</span></td><td><span className="badge badge-g">Success</span></td><td className="td-muted">2 min ago</td>
-                  </tr>
-                  <tr>
-                    <td><div className="user-cell"><div className="av av-v">S</div><div><div className="user-name">Sara B.</div><div className="user-id">+212698765432</div></div></div></td>
-                    <td className="td-muted">Ride Fare</td><td><strong>42 MAD</strong></td><td><span className="badge badge-v">Go</span></td><td><span className="badge badge-g">Success</span></td><td className="td-muted">5 min ago</td>
-                  </tr>
-                  <tr>
-                    <td><div className="user-cell"><div className="av av-p">Y</div><div><div className="user-name">Youssef A.</div><div className="user-id">+212655443322</div></div></div></td>
-                    <td className="td-muted">Booking</td><td><strong>1,200 MAD</strong></td><td><span className="badge badge-p">Stays</span></td><td><span className="badge badge-y">Pending</span></td><td className="td-muted">8 min ago</td>
-                  </tr>
-                  <tr>
-                    <td><div className="user-cell"><div className="av av-b">N</div><div><div className="user-name">Nadia R.</div><div className="user-id">+212677889900</div></div></div></td>
-                    <td className="td-muted">QR Pay</td><td><strong>73.90 MAD</strong></td><td><span className="badge badge-y">Pay</span></td><td><span className="badge badge-g">Success</span></td><td className="td-muted">12 min ago</td>
-                  </tr>
-                  <tr>
-                    <td><div className="user-cell"><div className="av av-o">M</div><div><div className="user-name">Mohamed T.</div><div className="user-id">+212644332211</div></div></div></td>
-                    <td className="td-muted">Withdraw</td><td><strong>2,000 MAD</strong></td><td><span className="badge badge-y">Pay</span></td><td><span className="badge badge-r">Flagged</span></td><td className="td-muted">18 min ago</td>
-                  </tr>
+                  {recentTx.length === 0 && (
+                    <tr><td colSpan={5} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>No recent transactions</td></tr>
+                  )}
+                  {recentTx.map((t) => (
+                    <tr key={t.id}>
+                      <td className="td-mono">{t.reference || t.id.slice(0, 8)}</td>
+                      <td className="td-muted">{t.type || '—'}</td>
+                      <td><strong>{Number(t.amount).toLocaleString()} MAD</strong></td>
+                      <td><span className={`badge ${t.status === 'COMPLETED' ? 'badge-g' : t.status === 'FAILED' ? 'badge-r' : 'badge-y'}`}>{t.status}</span></td>
+                      <td className="td-muted">{timeAgo(t.created_at)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

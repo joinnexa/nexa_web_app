@@ -1,18 +1,48 @@
+import { useCallback, useEffect, useState } from 'react'
+import { api } from '../api'
+import type { AuditLogEntry } from '../api/types'
+
 export function AuditLogs() {
+  const [data, setData] = useState<AuditLogEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  const load = useCallback(() => {
+    setLoading(true)
+    setError(null)
+    api.AUDIT.getLogs({ limit: 50 })
+      .then((res) => {
+        const items = Array.isArray(res) ? res : (res as { items?: AuditLogEntry[] }).items ?? []
+        setData(items)
+      })
+      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load'))
+      .finally(() => setLoading(false))
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
   return (
     <>
       <div className="section-title">Audit Logs</div>
-      <div className="section-sub">All admin actions — immutable log</div>
+      <div className="section-sub">All admin actions — immutable log · <code style={{ fontSize: 11, background: 'var(--surf2)', padding: '2px 6px', borderRadius: 4 }}>/admin/audit/logs</code></div>
+      {error && <div className="alert alert-r">{error}</div>}
       <div className="card">
         <div className="card-hdr"><div className="card-title">Recent Actions</div></div>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Action</th><th>Admin</th><th>Target</th><th>IP</th><th>Time</th></tr></thead>
             <tbody>
-              <tr><td><span className="badge badge-g">KYC Approved</span></td><td>Super Admin</td><td>USR-8841 Fatima Z.</td><td className="td-mono">105.158.x.x</td><td className="td-muted">5 min ago</td></tr>
-              <tr><td><span className="badge badge-r">Account Frozen</span></td><td>Compliance</td><td>USR-7721 Mohamed T.</td><td className="td-mono">105.158.x.x</td><td className="td-muted">20 min ago</td></tr>
-              <tr><td><span className="badge badge-y">Config Changed</span></td><td>Super Admin</td><td>Surge pricing enabled</td><td className="td-mono">105.158.x.x</td><td className="td-muted">1h ago</td></tr>
-              <tr><td><span className="badge badge-v">Host Approved</span></td><td>Go Operations</td><td>HOST-221 Hassan B.</td><td className="td-mono">105.158.x.x</td><td className="td-muted">2h ago</td></tr>
+              {loading && <tr><td colSpan={5} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>Loading…</td></tr>}
+              {!loading && data.length === 0 && <tr><td colSpan={5} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>No logs</td></tr>}
+              {!loading && data.map((row) => (
+                <tr key={row.id}>
+                  <td><span className="badge badge-g">{row.action || '—'}</span></td>
+                  <td>{row.admin_email ?? row.admin_id ?? '—'}</td>
+                  <td>{row.target_type || row.target_id || row.details || '—'}</td>
+                  <td className="td-mono">{row.ip_address || '—'}</td>
+                  <td className="td-muted">{row.created_at ? new Date(row.created_at).toLocaleString() : '—'}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

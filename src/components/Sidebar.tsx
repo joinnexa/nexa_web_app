@@ -1,4 +1,5 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
 
 const navItems = [
   { section: 'Overview', links: [
@@ -136,6 +137,9 @@ const icons: Record<string, JSX.Element> = {
 }
 
 export function Sidebar() {
+  const { user, logout } = useAuth()
+  const navigate = useNavigate()
+  const handleLogout = () => { logout(); navigate('/login') }
   return (
     <aside className="sidebar">
       <div className="sb-brand">
@@ -187,12 +191,15 @@ export function Sidebar() {
       ))}
 
       <div className="sb-bottom">
-        <div className="sb-user">
-          <div className="sb-user-av">S</div>
-          <div>
-            <div className="sb-user-name">Super Admin</div>
-            <div className="sb-user-role">admin@nexa.ma</div>
+        <div className="sb-user" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%' }}>
+            <div className="sb-user-av">{(user?.email || 'S').slice(0, 1).toUpperCase()}</div>
+            <div>
+              <div className="sb-user-name">Super Admin</div>
+              <div className="sb-user-role">{user?.email ?? 'admin@nexa.ma'}</div>
+            </div>
           </div>
+          <button type="button" className="btn btn-ghost btn-sm" onClick={handleLogout} style={{ color: 'rgba(255,255,255,.6)', fontSize: 11 }}>Sign out</button>
         </div>
       </div>
     </aside>

@@ -1,5 +1,9 @@
+import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { api } from '../api'
+
+type NotifSummary = { pendingKyc?: number; openRiskAlerts?: number; pendingHostApplications?: number; total?: number } | null
 
 const navItems = [
   { section: 'Overview', links: [
@@ -9,10 +13,10 @@ const navItems = [
   ]},
   { product: 'NEXA PAY', color: 'var(--y)', links: [
     { to: '/pay', label: 'Pay Dashboard', icon: 'credit' },
-    { to: '/kyc', label: 'KYC Review', icon: 'user-check', badge: '12' },
+    { to: '/kyc', label: 'KYC Review', icon: 'user-check', badgeKey: 'pendingKyc' as const },
     { to: '/transactions', label: 'Transactions', icon: 'dollar' },
     { to: '/wallets', label: 'Wallets', icon: 'wallet' },
-    { to: '/fraud', label: 'Fraud & Risk', icon: 'shield', badge: '3' },
+    { to: '/fraud', label: 'Fraud & Risk', icon: 'shield', badgeKey: 'openRiskAlerts' as const },
     { to: '/settlements', label: 'Settlements', icon: 'repeat' },
   ]},
   { product: 'NEXA GO', color: 'var(--v)', links: [
@@ -27,7 +31,7 @@ const navItems = [
     { to: '/stays', label: 'Stays Dashboard', icon: 'home' },
     { to: '/listings', label: 'Listings', icon: 'layout' },
     { to: '/bookings', label: 'Bookings', icon: 'calendar' },
-    { to: '/hosts', label: 'Hosts', icon: 'users', badge: '5' },
+    { to: '/hosts', label: 'Hosts', icon: 'users', badgeKey: 'pendingHostApplications' as const },
   ]},
   { section: 'System', links: [
     { to: '/admins', label: 'Admin Users', icon: 'settings' },
@@ -136,9 +140,23 @@ const icons: Record<string, JSX.Element> = {
   ),
 }
 
+function getBadgeCount(link: { badge?: boolean; badgeKey?: keyof NonNullable<NotifSummary> }, notifications: NotifSummary): number | null {
+  if (!('badgeKey' in link) || !link.badgeKey) return null
+  const n = notifications?.[link.badgeKey]
+  return n != null && n > 0 ? n : null
+}
+
 export function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [notifications, setNotifications] = useState<NotifSummary>(null)
+
+  useEffect(() => {
+    api.NOTIFICATIONS.getSummary()
+      .then((s) => setNotifications(s))
+      .catch(() => setNotifications(null))
+  }, [])
+
   const handleLogout = () => { logout(); navigate('/login') }
   return (
     <aside className="sidebar">
@@ -158,14 +176,17 @@ export function Sidebar() {
           {'section' in block && (
             <div className="sb-section">
               <div className="sb-section-label">{block.section}</div>
-              {block.links.map((link) => (
-                <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}>
-                  {icons[link.icon]}
-                  {link.label}
-                  {link.badge === true && <span className="sb-badge">●</span>}
-                  {typeof link.badge === 'string' && <span className="sb-badge sb-badge-y">{link.badge}</span>}
-                </NavLink>
-              ))}
+              {block.links.map((link) => {
+                const count = getBadgeCount(link, notifications)
+                return (
+                  <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}>
+                    {icons[link.icon]}
+                    {link.label}
+                    {link.badge === true && <span className="sb-badge">●</span>}
+                    {count != null && <span className="sb-badge sb-badge-y">{count}</span>}
+                  </NavLink>
+                )
+              })}
             </div>
           )}
           {'product' in block && (
@@ -176,14 +197,24 @@ export function Sidebar() {
                   <div className="sb-product-dot" style={{ background: block.color }} />
                   <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'rgba(255,255,255,.3)', letterSpacing: '.8px' }}>{block.product}</span>
                 </div>
-                {block.links.map((link) => (
-                  <NavLink key={link.to} to={link.to} className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}>
-                    {icons[link.icon]}
-                    {link.label}
-                    {link.badge === true && <span className="sb-badge">●</span>}
-                    {typeof link.badge === 'string' && <span className="sb-badge" style={block.product === 'NEXA PAY' ? { background: 'var(--y)', color: 'var(--ink)' } : block.product === 'NEXA STAYS' ? { background: 'var(--p)', color: 'white' } : undefined}>{link.badge}</span>}
-                  </NavLink>
-                ))}
+                {block.links.map((link) => {
+                  const count = getBadgeCount(link, notifications)
+                  return (
+                    <NavLink key={link.to} to={link.to} className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}>
+                      {icons[link.icon]}
+                      {link.label}
+                      {link.badge === true && <span className="sb-badge">●</span>}
+                      {count != null && (
+                        <span
+                          className="sb-badge"
+                          style={block.product === 'NEXA PAY' ? { background: 'var(--y)', color: 'var(--ink)' } : block.product === 'NEXA STAYS' ? { background: 'var(--p)', color: 'white' } : undefined}
+                        >
+                          {count}
+                        </span>
+                      )}
+                    </NavLink>
+                  )
+                })}
               </div>
             </>
           )}

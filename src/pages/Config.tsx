@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from '../api'
+import { api, type GoPricingConfig } from '../api'
 
 interface FlagRow {
   key: string
@@ -22,11 +22,20 @@ export function Config() {
     Promise.all([
       api.SYSTEM.getFeatureFlags(),
       api.SYSTEM.getPayConfig().catch(() => null),
-      api.GO.getPricing().catch(() => ({ rideTypes: [], pricing: {} })),
+      api.GO.getPricing().catch(() => []),
     ])
       .then(([flagsRes, pay, go]) => {
         if (pay) setPayConfig(pay)
-        if (go && typeof go === 'object' && 'pricing' in go) setGoPricing((go as { pricing: Record<string, { baseFare?: number; perKm?: number }> }).pricing)
+        if (Array.isArray(go) && go.length > 0) {
+          setGoPricing(
+            Object.fromEntries(
+              (go as GoPricingConfig[]).map((r) => [
+                r.vehicle_type,
+                { baseFare: r.base_fare, perKm: r.per_km_rate, fixedCommission: r.commission_min },
+              ]),
+            ),
+          )
+        }
         return flagsRes
       })
       .then((res) => {

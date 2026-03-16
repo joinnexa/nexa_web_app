@@ -46,8 +46,44 @@ const GO = {
     apiClient.get<{ data: unknown[]; total: number; page: number; limit: number }>('/admin/go/rides', { params }).then((r) => r.data),
   getDeliveryOrders: (params?: { page?: number; limit?: number; status?: string }) =>
     apiClient.get<{ data: unknown[]; total: number; page: number; limit: number }>('/admin/go/delivery/orders', { params }).then((r) => r.data),
-  getPricing: () => apiClient.get<{ rideTypes: string[]; pricing: Record<string, unknown> }>('/admin/go/pricing').then((r) => r.data),
-  updatePricing: (body: Record<string, unknown>) => apiClient.patch('/admin/go/pricing', body),
+  getPricing: () =>
+    apiClient.get<GoPricingConfig[]>('/admin/go/pricing').then((r) => r.data),
+  getPricingHistory: () =>
+    apiClient.get<GoPricingAuditEntry[]>('/admin/go/pricing/history').then((r) => r.data),
+  updatePricing: (vehicleType: string, body: Record<string, unknown>) =>
+    apiClient.patch(`/admin/go/pricing/${encodeURIComponent(vehicleType)}`, body),
+  setSurge: (vehicleType: string, surgeActive: boolean, surgeMultiplier?: number) =>
+    apiClient.post('/admin/go/pricing/surge', { vehicleType, surgeActive, surgeMultiplier }),
+}
+
+export interface GoPricingConfig {
+  id: string
+  vehicle_type: string
+  base_fare: number
+  per_km_rate: number
+  per_min_rate: number
+  min_fare: number
+  booking_fee: number
+  commission_type: string
+  commission_rate: number | null
+  commission_min: number
+  cancellation_window_secs: number
+  cancellation_fee: number
+  surge_multiplier: number
+  surge_active: boolean
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface GoPricingAuditEntry {
+  id: string
+  vehicle_type: string
+  changed_by: string
+  changed_at: string
+  field_name: string
+  old_value: string | null
+  new_value: string | null
 }
 
 const ACTIVITY = {

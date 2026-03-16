@@ -11,7 +11,7 @@ export function FraudRisk() {
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
-    Promise.all([api.RISK.getAlerts({ limit: 50 }), api.RISK.getStats()])
+    Promise.all([api.RISK.getAlerts(), api.RISK.getStats()])
       .then(([alertsRes, statsRes]) => {
         setAlerts(Array.isArray(alertsRes) ? alertsRes : (alertsRes as { items?: RiskAlert[] }).items ?? [])
         setStats(statsRes as { critical?: number; medium?: number; resolved?: number })

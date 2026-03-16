@@ -11,7 +11,18 @@ export function AllUsers() {
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
-    const account_type = tab !== 'All' ? tab : undefined
+    const account_type =
+      tab === 'All'
+        ? undefined
+        : tab === 'Consumers'
+          ? 'CONSUMER'
+          : tab === 'Drivers'
+            ? 'DRIVER'
+            : tab === 'Couriers'
+              ? 'COURIER'
+              : tab === 'Hosts'
+                ? 'HOST'
+                : undefined
     api.USERS.getList({ limit: 50, account_type })
       .then((res) => {
         const items = Array.isArray(res) ? res : (res as { data?: AdminUser[] }).data ?? []

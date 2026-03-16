@@ -85,6 +85,16 @@ export interface StaysStats {
   bookingsMtd?: number
   hostsPending?: number
   revenueMtd?: number
+  totalListings?: number
+  liveListings?: number
+  totalHosts?: number
+  pendingHostVerification?: number
+  approvedHosts?: number
+  totalBookings?: number
+  todayBookings?: number
+  confirmedBookings?: number
+  totalRevenue?: number
+  todayRevenue?: number
   [key: string]: unknown
 }
 

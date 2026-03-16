@@ -30,75 +30,55 @@ export function LoginPage() {
   }
 
   return (
-    <div style={{
-    minHeight: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    background: 'var(--surf)',
-    padding: 24,
-  }}>
-      <div style={{
-        width: '100%',
-        maxWidth: 380,
-        background: 'white',
-        borderRadius: 'var(--radius-lg)',
-        border: '1px solid var(--surf3)',
-        boxShadow: 'var(--sh2)',
-        padding: 32,
-      }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <img src="/logo/nexa-icon.png" alt="Nexa" style={{ width: 48, height: 48, marginBottom: 12 }} />
-          <h1 style={{ fontSize: 20, fontWeight: 800, color: 'var(--ink)', marginBottom: 4 }}>Nexa Admin</h1>
-          <p style={{ fontSize: 13, color: 'var(--muted)' }}>Sign in to the ecosystem dashboard</p>
+    <div className="login-page">
+      <div className="login-brand-panel">
+        <div className="login-brand">
+          <div className="logo-wrap">
+            <img src="/logo/nexa-icon.png" alt="Nexa" />
+          </div>
+          <h1>Nexa Admin</h1>
+          <p className="tagline">
+            Sign in to manage Pay, Go, and Stays from one dashboard.
+          </p>
         </div>
-        <form onSubmit={handleSubmit}>
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              fontSize: 14,
-              border: '1px solid var(--surf3)',
-              borderRadius: 9,
-              marginBottom: 16,
-              boxSizing: 'border-box',
-            }}
-          />
-          <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--ink)', marginBottom: 6 }}>Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-            style={{
-              width: '100%',
-              padding: '10px 12px',
-              fontSize: 14,
-              border: '1px solid var(--surf3)',
-              borderRadius: 9,
-              marginBottom: 20,
-              boxSizing: 'border-box',
-            }}
-          />
-          {error && (
-            <div className="alert alert-r" style={{ marginBottom: 16 }}>{error}</div>
-          )}
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn btn-dark"
-            style={{ width: '100%', justifyContent: 'center' }}
-          >
-            {loading ? 'Signing in…' : 'Sign in'}
-          </button>
-        </form>
+      </div>
+      <div className="login-form-panel">
+        <div className="login-form-card">
+          <h2>Sign in</h2>
+          <p className="form-sub">Use your admin account to continue</p>
+          <form onSubmit={handleSubmit}>
+            <label htmlFor="login-email">Email</label>
+            <input
+              id="login-email"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              autoComplete="email"
+              placeholder="admin@nexa.ma"
+            />
+            <label htmlFor="login-password">Password</label>
+            <input
+              id="login-password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              autoComplete="current-password"
+              placeholder="••••••••"
+            />
+            {error && (
+              <div className="alert alert-r" role="alert">{error}</div>
+            )}
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-submit"
+            >
+              {loading ? 'Signing in…' : 'Sign in'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )

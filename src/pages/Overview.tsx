@@ -13,6 +13,46 @@ function timeAgo(iso: string) {
   return d.toLocaleDateString()
 }
 
+type ActivityEvent = { id: string; type: string; product: string; payload: Record<string, unknown>; created_at: string }
+
+function activityEventIcon(type: string, product: string) {
+  if (type.includes('ride')) return '🚖'
+  if (type.includes('delivery') || type.includes('order')) return '🛵'
+  if (type.includes('kyc')) return '✓'
+  if (type.includes('booking')) return '🏠'
+  if (type.includes('fraud') || type.includes('audit')) return '⚠'
+  if (product === 'go') return '🚗'
+  if (product === 'stays') return '🏠'
+  return '•'
+}
+
+function activityEventBg(product: string) {
+  if (product === 'go') return 'var(--ys)'
+  if (product === 'stays') return 'var(--ps)'
+  return 'var(--gs)'
+}
+
+function activityEventText(ev: ActivityEvent): string {
+  const p = ev.payload
+  if (ev.type === 'ride_completed' || ev.type === 'ride_created')
+    return `${p.rideId ?? 'Ride'} ${ev.type === 'ride_completed' ? 'completed' : ''} — ${p.amount != null ? `${p.amount} MAD` : ''} — ${[p.from, p.to].filter(Boolean).join(' → ') || '—'}`
+  if (ev.type === 'delivery_delivered' || ev.type === 'order_created')
+    return `${p.orderId ?? 'Order'} ${ev.type === 'delivery_delivered' ? 'delivered' : 'created'} — ${p.customer ?? ''} · ${p.merchant ?? ''}`
+  if (ev.type === 'kyc_approved' || ev.type === 'kyc_rejected')
+    return `KYC ${ev.type === 'kyc_approved' ? 'approved' : 'rejected'} — ${p.userName ?? p.user_id ?? ''}`
+  if (ev.type === 'booking_confirmed') return `Booking confirmed — ${p.amount != null ? `${p.amount} MAD` : ''}`
+  if (ev.type === 'fraud_alert') return `Fraud alert — ${p.entity_id ?? ''}`
+  return `${ev.type} — ${p.entity_id ?? p.entity_type ?? ''}`
+}
+
+function activityEventAmount(ev: ActivityEvent): number | null {
+  const p = ev.payload
+  if (ev.type === 'ride_completed' || ev.type === 'ride_created') return p.amount != null ? Number(p.amount) : null
+  if (ev.type === 'delivery_delivered') return p.total_amount != null ? Number(p.total_amount) : null
+  if (ev.type === 'booking_confirmed') return p.amount != null ? Number(p.amount) : null
+  return null
+}
+
 function formatVolume(n: number) {
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
   if (n >= 1e3) return `${(n / 1e3).toFixed(1)}K`
@@ -28,6 +68,8 @@ export function Overview() {
     goDeliveryRevenue?: number
     total_revenue?: number
   } | null>(null)
+  const [activityEvents, setActivityEvents] = useState<ActivityEvent[]>([])
+  const [activityLoading, setActivityLoading] = useState(true)
   const flagged = pay?.flaggedTransactions ?? 0
   const pendingKyc = pay?.pendingKyc ?? 0
 
@@ -41,6 +83,14 @@ export function Overview() {
     api.FINANCE.getRevenue()
       .then((res) => setRevenue(res as any))
       .catch(() => setRevenue(null))
+  }, [])
+
+  useEffect(() => {
+    setActivityLoading(true)
+    api.ACTIVITY.getRecent({ limit: 8 })
+      .then((res) => setActivityEvents(res?.events ?? []))
+      .catch(() => setActivityEvents([]))
+      .finally(() => setActivityLoading(false))
   }, [])
 
   if (loading && !pay) {
@@ -334,31 +384,27 @@ export function Overview() {
         </div>
         <div className="col-1">
           <div className="card" style={{ height: '100%' }}>
-            <div className="card-hdr"><div className="card-title">Live Activity</div></div>
+            <div className="card-hdr">
+              <div className="card-title">Live Activity</div>
+              <div className="card-actions"><Link to="/activity" className="btn btn-ghost btn-sm">View all</Link></div>
+            </div>
             <div className="card-body" style={{ padding: '12px 16px' }}>
-              <div className="feed-item">
-                <div className="feed-icon" style={{ background: 'var(--ys)' }}>🚖</div>
-                <div><div className="feed-text">Ride completed — Casablanca Maârif</div><div className="feed-time">Just now</div></div>
-                <div className="feed-amt" style={{ color: 'var(--g)' }}>+42 MAD</div>
-              </div>
-              <div className="feed-item">
-                <div className="feed-icon" style={{ background: 'var(--gs)' }}>✓</div>
-                <div><div className="feed-text">KYC approved — Fatima Z.</div><div className="feed-time">2 min ago</div></div>
-              </div>
-              <div className="feed-item">
-                <div className="feed-icon" style={{ background: 'var(--vs)' }}>🛵</div>
-                <div><div className="feed-text">Food delivery — Bella Bistro</div><div className="feed-time">3 min ago</div></div>
-                <div className="feed-amt" style={{ color: 'var(--g)' }}>+73 MAD</div>
-              </div>
-              <div className="feed-item">
-                <div className="feed-icon" style={{ background: 'var(--rs)' }}>⚠</div>
-                <div><div className="feed-text">Fraud alert — large withdrawal</div><div className="feed-time">18 min ago</div></div>
-              </div>
-              <div className="feed-item">
-                <div className="feed-icon" style={{ background: 'var(--ps)' }}>🏠</div>
-                <div><div className="feed-text">New booking — Rabat Villa</div><div className="feed-time">22 min ago</div></div>
-                <div className="feed-amt" style={{ color: 'var(--g)' }}>+1,200 MAD</div>
-              </div>
+              {activityLoading && activityEvents.length === 0 && (
+                <div className="td-muted" style={{ padding: 12 }}>Loading…</div>
+              )}
+              {!activityLoading && activityEvents.length === 0 && (
+                <div className="td-muted" style={{ padding: 12 }}>No recent activity</div>
+              )}
+              {activityEvents.map((ev) => {
+                const amt = activityEventAmount(ev)
+                return (
+                  <div key={ev.id} className="feed-item">
+                    <div className="feed-icon" style={{ background: activityEventBg(ev.product) }}>{activityEventIcon(ev.type, ev.product)}</div>
+                    <div><div className="feed-text">{activityEventText(ev)}</div><div className="feed-time">{timeAgo(ev.created_at)}</div></div>
+                    {amt != null && <div className="feed-amt" style={{ color: 'var(--g)' }}>+{amt.toLocaleString()} MAD</div>}
+                  </div>
+                )
+              })}
             </div>
           </div>
         </div>

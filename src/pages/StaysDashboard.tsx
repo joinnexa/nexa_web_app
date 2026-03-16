@@ -19,17 +19,30 @@ export function StaysDashboard() {
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
-    Promise.all([
+    Promise.allSettled([
       api.STAYS.getStats(),
       api.STAYS.getBookings({ limit: 10 }),
       api.STAYS.getHostApplications({ status: 'PENDING', limit: 5 }),
     ])
-      .then(([s, b, h]) => {
-        setStats(s as StaysStats)
-        setBookings(Array.isArray(b) ? b : (b as { items?: unknown[] }).items ?? [])
-        setHostApps(Array.isArray(h) ? h : (h as { items?: unknown[] }).items ?? [])
+      .then(([statsResult, bookingsResult, hostAppsResult]) => {
+        if (statsResult.status === 'fulfilled') {
+          const s = statsResult.value as Record<string, unknown>
+          setStats({
+            activeListings: s?.liveListings ?? s?.activeListings,
+            bookingsMtd: s?.todayBookings ?? s?.totalBookings ?? s?.bookingsMtd,
+            hostsPending: s?.pendingHostVerification ?? s?.hostsPending,
+            revenueMtd: s?.totalRevenue ?? s?.todayRevenue ?? s?.revenueMtd,
+          } as StaysStats)
+        } else setError(statsResult.reason?.response?.data?.message ?? statsResult.reason?.message ?? 'Failed to load stats')
+        if (bookingsResult.status === 'fulfilled') {
+          const b = bookingsResult.value
+          setBookings(Array.isArray(b) ? b : (b as { items?: unknown[] }).items ?? [])
+        }
+        if (hostAppsResult.status === 'fulfilled') {
+          const h = hostAppsResult.value
+          setHostApps(Array.isArray(h) ? h : (h as { items?: unknown[] }).items ?? [])
+        }
       })
-      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
 

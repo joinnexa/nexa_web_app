@@ -142,6 +142,13 @@ const SEARCH = {
     apiClient.get<{ users: unknown[]; transactions: unknown[]; rides: unknown[] }>('/admin/search', { params: { q, limit } }).then((r) => r.data),
 }
 
+const NOTIFICATIONS = {
+  getSummary: () =>
+    apiClient.get<{ pendingKyc?: number; openRiskAlerts?: number; pendingHostApplications?: number; total?: number }>(
+      '/admin/notifications/summary',
+    ).then((r) => r.data),
+}
+
 export const api = {
   AUTH,
   DASHBOARD,
@@ -159,6 +166,7 @@ export const api = {
   SYSTEM,
   STAYS,
   SEARCH,
+  NOTIFICATIONS,
 }
 
 export type { DashboardStats, KycApplication, AdminTransaction, RiskAlert, AuditLogEntry, FeatureFlag, StaysStats, AdminUser, AdminWallet }

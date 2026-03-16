@@ -19,6 +19,7 @@ export function useDashboardStats() {
   const [pay, setPay] = useState<DashboardStats | null>(null)
   const [stays, setStays] = useState<StaysStats | null>(null)
   const [go, setGo] = useState<GoStats | null>(null)
+  const [systemStatus, setSystemStatus] = useState<{ api?: string; database?: string } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -32,6 +33,7 @@ export function useDashboardStats() {
         if (ecosystem?.pay) setPay(ecosystem.pay)
         if (ecosystem?.stays) setStays(ecosystem.stays)
         if (ecosystem?.go) setGo(ecosystem.go)
+        if (ecosystem?.systemStatus) setSystemStatus(ecosystem.systemStatus)
         setLoading(false)
       })
       .catch(() => {
@@ -56,5 +58,5 @@ export function useDashboardStats() {
     return () => { cancelled = true }
   }, [])
 
-  return { pay, stays, go, loading, error }
+  return { pay, stays, go, systemStatus, loading, error }
 }

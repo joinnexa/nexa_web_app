@@ -20,8 +20,14 @@ function formatVolume(n: number) {
 }
 
 export function Overview() {
-  const { pay, stays, go, loading, error } = useDashboardStats()
+  const { pay, stays, go, systemStatus, loading, error } = useDashboardStats()
   const [recentTx, setRecentTx] = useState<AdminTransaction[]>([])
+  const [revenue, setRevenue] = useState<{
+    payRevenue?: number
+    goRideRevenue?: number
+    goDeliveryRevenue?: number
+    total_revenue?: number
+  } | null>(null)
   const flagged = pay?.flaggedTransactions ?? 0
   const pendingKyc = pay?.pendingKyc ?? 0
 
@@ -29,6 +35,12 @@ export function Overview() {
     api.TRANSACTIONS.getList({ limit: 5 })
       .then((data) => setRecentTx(Array.isArray(data) ? data : (data as { data?: AdminTransaction[] }).data ?? []))
       .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    api.FINANCE.getRevenue()
+      .then((res) => setRevenue(res as any))
+      .catch(() => setRevenue(null))
   }, [])
 
   if (loading && !pay) {
@@ -151,8 +163,12 @@ export function Overview() {
             </svg>
           </div>
           <div className="stat-label">API</div>
-          <div className="stat-val">{pay?.systemStatus?.api === 'healthy' ? 'OK' : '—'}</div>
-          <div className="stat-sub">{pay?.successRate != null ? `${pay.successRate}% success` : 'Health'}</div>
+          <div className="stat-val">
+            {systemStatus?.api === 'healthy' && systemStatus?.database === 'healthy' ? 'OK' : systemStatus?.api ?? '—'}
+          </div>
+          <div className="stat-sub">
+            {systemStatus?.database ? `DB: ${systemStatus.database}` : pay?.successRate != null ? `${pay.successRate}% success` : 'Health'}
+          </div>
         </div>
       </div>
 
@@ -162,14 +178,10 @@ export function Overview() {
             <div className="card-hdr">
               <div>
                 <div className="card-title">Revenue by Product</div>
-                <div className="card-sub">Last 7 days · MAD</div>
+                <div className="card-sub">From platform revenue (approx)</div>
               </div>
               <div className="card-actions">
-                <div className="tabs">
-                  <button type="button" className="tab active">7D</button>
-                  <button type="button" className="tab">30D</button>
-                  <button type="button" className="tab">3M</button>
-                </div>
+                <span className="td-muted" style={{ fontSize: 11 }}>MTD / lifetime mix</span>
               </div>
             </div>
             <div className="card-body">
@@ -184,18 +196,32 @@ export function Overview() {
                   <div style={{ width: 8, height: 8, borderRadius: 2, background: 'var(--p)' }} /> Stays
                 </div>
               </div>
-              <div className="chart-bars">
-                {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, i) => (
-                  <div key={day} className="bar-wrap">
-                    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: 100, gap: 2 }}>
-                      <div className="bar" style={{ height: [72, 58, 80, 64, 88, 96, 50][i], background: 'var(--y)', opacity: 0.85 }} />
-                      <div className="bar" style={{ height: [38, 44, 52, 48, 60, 70, 36][i], background: 'var(--v)' }} />
-                      <div className="bar" style={{ height: [16, 20, 24, 18, 28, 32, 14][i], background: 'var(--p)' }} />
-                    </div>
-                    <div className="bar-lbl">{day}</div>
+              {revenue ? (() => {
+                const payVal = revenue?.payRevenue ?? 0
+                const goVal = (revenue?.goRideRevenue ?? 0) + (revenue?.goDeliveryRevenue ?? 0)
+                const staysVal = stays?.revenueMtd ?? 0
+                const total = payVal + goVal + staysVal || 1
+                const payH = (payVal / total) * 100
+                const goH = (goVal / total) * 100
+                const staysH = (staysVal / total) * 100
+                const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+                return (
+                  <div className="chart-bars">
+                    {days.map((day) => (
+                      <div key={day} className="bar-wrap">
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', height: 100, gap: 2 }}>
+                          <div className="bar" style={{ height: `${payH}%`, background: 'var(--y)', opacity: 0.85 }} />
+                          <div className="bar" style={{ height: `${goH}%`, background: 'var(--v)' }} />
+                          <div className="bar" style={{ height: `${staysH}%`, background: 'var(--p)' }} />
+                        </div>
+                        <div className="bar-lbl">{day}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                )
+              })() : (
+                <div className="td-muted" style={{ padding: 8 }}>Revenue data not available</div>
+              )}
             </div>
           </div>
         </div>
@@ -208,19 +234,69 @@ export function Overview() {
               </div>
             </div>
             <div className="card-body">
-              <svg viewBox="0 0 120 120" width={120} height={120} style={{ display: 'block', margin: '0 auto 16px' }}>
-                <circle cx={60} cy={60} r={48} fill="none" stroke="var(--surf2)" strokeWidth={20} />
-                <circle cx={60} cy={60} r={48} fill="none" stroke="var(--y)" strokeWidth={20} strokeDasharray="180.96 120.64" strokeDashoffset={-30.16} transform="rotate(-90 60 60)" />
-                <circle cx={60} cy={60} r={48} fill="none" stroke="var(--v)" strokeWidth={20} strokeDasharray="90.48 211.12" strokeDashoffset={-211.12} transform="rotate(-90 60 60)" />
-                <circle cx={60} cy={60} r={48} fill="none" stroke="var(--p)" strokeWidth={20} strokeDasharray="30.16 271.44" strokeDashoffset={-301.6} transform="rotate(-90 60 60)" />
-                <text x={60} y={58} textAnchor="middle" fontSize={14} fontWeight={800} fill="var(--ink)">4.2M</text>
-                <text x={60} y={70} textAnchor="middle" fontSize={8} fill="var(--muted)">MAD</text>
-              </svg>
-              <div className="donut-legend">
-                <div className="legend-row"><div className="legend-dot" style={{ background: 'var(--y)' }} /> Pay <div className="legend-val">60%</div></div>
-                <div className="legend-row"><div className="legend-dot" style={{ background: 'var(--v)' }} /> Go <div className="legend-val">30%</div></div>
-                <div className="legend-row"><div className="legend-dot" style={{ background: 'var(--p)' }} /> Stays <div className="legend-val">10%</div></div>
-              </div>
+              {(() => {
+                const payVal = revenue?.payRevenue ?? 0
+                const goVal = (revenue?.goRideRevenue ?? 0) + (revenue?.goDeliveryRevenue ?? 0)
+                const staysVal = stays?.revenueMtd ?? 0
+                const total = payVal + goVal + staysVal
+                const safeTotal = total || 1
+                const payPct = Math.round((payVal / safeTotal) * 100)
+                const goPct = Math.round((goVal / safeTotal) * 100)
+                const staysPct = 100 - payPct - goPct
+                const circumference = 2 * Math.PI * 48
+                const payLen = (payVal / safeTotal) * circumference
+                const goLen = (goVal / safeTotal) * circumference
+                const staysLen = (staysVal / safeTotal) * circumference
+                return (
+                  <>
+                    <svg viewBox="0 0 120 120" width={120} height={120} style={{ display: 'block', margin: '0 auto 16px' }}>
+                      <circle cx={60} cy={60} r={48} fill="none" stroke="var(--surf2)" strokeWidth={20} />
+                      <circle
+                        cx={60}
+                        cy={60}
+                        r={48}
+                        fill="none"
+                        stroke="var(--y)"
+                        strokeWidth={20}
+                        strokeDasharray={`${payLen} ${circumference - payLen}`}
+                        strokeDashoffset={-0}
+                        transform="rotate(-90 60 60)"
+                      />
+                      <circle
+                        cx={60}
+                        cy={60}
+                        r={48}
+                        fill="none"
+                        stroke="var(--v)"
+                        strokeWidth={20}
+                        strokeDasharray={`${goLen} ${circumference - goLen}`}
+                        strokeDashoffset={-(payLen)}
+                        transform="rotate(-90 60 60)"
+                      />
+                      <circle
+                        cx={60}
+                        cy={60}
+                        r={48}
+                        fill="none"
+                        stroke="var(--p)"
+                        strokeWidth={20}
+                        strokeDasharray={`${staysLen} ${circumference - staysLen}`}
+                        strokeDashoffset={-(payLen + goLen)}
+                        transform="rotate(-90 60 60)"
+                      />
+                      <text x={60} y={58} textAnchor="middle" fontSize={14} fontWeight={800} fill="var(--ink)">
+                        {total ? formatVolume(total) : '—'}
+                      </text>
+                      <text x={60} y={70} textAnchor="middle" fontSize={8} fill="var(--muted)">MAD</text>
+                    </svg>
+                    <div className="donut-legend">
+                      <div className="legend-row"><div className="legend-dot" style={{ background: 'var(--y)' }} /> Pay <div className="legend-val">{payPct}%</div></div>
+                      <div className="legend-row"><div className="legend-dot" style={{ background: 'var(--v)' }} /> Go <div className="legend-val">{goPct}%</div></div>
+                      <div className="legend-row"><div className="legend-dot" style={{ background: 'var(--p)' }} /> Stays <div className="legend-val">{staysPct}%</div></div>
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </div>
         </div>

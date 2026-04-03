@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { api } from '../api'
 
 interface StaysStats {
@@ -13,6 +14,7 @@ export function StaysDashboard() {
   const [stats, setStats] = useState<StaysStats | null>(null)
   const [bookings, setBookings] = useState<unknown[]>([])
   const [hostApps, setHostApps] = useState<unknown[]>([])
+  const [pendingProfiles, setPendingProfiles] = useState<unknown[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,8 +25,9 @@ export function StaysDashboard() {
       api.STAYS.getStats(),
       api.STAYS.getBookings({ limit: 10 }),
       api.STAYS.getHostApplications({ status: 'PENDING', limit: 5 }),
+      api.STAYS.getHosts({ status: 'PENDING', limit: 5 }),
     ])
-      .then(([statsResult, bookingsResult, hostAppsResult]) => {
+      .then(([statsResult, bookingsResult, hostAppsResult, hostsPendingResult]) => {
         if (statsResult.status === 'fulfilled') {
           const s = statsResult.value as Record<string, unknown>
           setStats({
@@ -41,6 +44,10 @@ export function StaysDashboard() {
         if (hostAppsResult.status === 'fulfilled') {
           const h = hostAppsResult.value
           setHostApps(Array.isArray(h) ? h : (h as { items?: unknown[] }).items ?? [])
+        }
+        if (hostsPendingResult.status === 'fulfilled') {
+          const hp = hostsPendingResult.value
+          setPendingProfiles(Array.isArray(hp) ? hp : (hp as { items?: unknown[] }).items ?? [])
         }
       })
       .finally(() => setLoading(false))
@@ -87,15 +94,55 @@ export function StaysDashboard() {
         </div>
         <div className="col-1">
           <div className="card" style={{ height: '100%' }}>
-            <div className="card-hdr"><div className="card-title">Host Approvals</div><span className="badge badge-y" style={{ marginLeft: 'auto' }}>{hostApps.length} pending</span></div>
+            <div className="card-hdr">
+              <div className="card-title">Host queues</div>
+              <Link to="/hosts" className="btn btn-ghost btn-sm" style={{ marginLeft: 'auto' }}>
+                Open host review
+              </Link>
+            </div>
             <div className="card-body" style={{ padding: '12px 16px' }}>
-              {hostApps.length === 0 && <div className="td-muted" style={{ padding: 12 }}>No pending applications</div>}
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', marginBottom: 8 }}>
+                Verification <span className="badge badge-y">{pendingProfiles.length}</span>
+              </div>
+              <div className="td-muted" style={{ fontSize: 11, marginBottom: 8 }}>
+                Matches &quot;HOSTS PENDING&quot; — ID / profile review
+              </div>
+              {pendingProfiles.length === 0 && (
+                <div className="td-muted" style={{ padding: '0 0 12px', fontSize: 12 }}>None pending</div>
+              )}
+              {pendingProfiles.map((p, i) => {
+                const row = p as Record<string, unknown>
+                const u = row.user as Record<string, unknown> | undefined
+                const label = String(u?.full_name ?? u?.email ?? row.user_id ?? row.id ?? 'Host').slice(0, 28)
+                return (
+                  <div key={(row.id as string) || i} className="feed-item">
+                    <div className="feed-icon" style={{ background: 'var(--ps)' }}>✓</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div className="feed-text" style={{ fontWeight: 700 }}>{label}</div>
+                      <div className="feed-time">Verification</div>
+                    </div>
+                    <button type="button" className="btn btn-g btn-sm" onClick={() => api.STAYS.approveHost(String(row.id)).then(load)}>
+                      Approve
+                    </button>
+                  </div>
+                )
+              })}
+              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--muted)', margin: '16px 0 8px' }}>
+                New applications <span className="badge badge-y">{hostApps.length}</span>
+              </div>
+              <div className="td-muted" style={{ fontSize: 11, marginBottom: 8 }}>
+                Become-a-host sign-ups
+              </div>
+              {hostApps.length === 0 && <div className="td-muted" style={{ padding: '0 0 8px', fontSize: 12 }}>None pending</div>}
               {hostApps.map((h, i) => {
                 const row = h as Record<string, unknown>
                 return (
                 <div key={(row.id as string) || i} className="feed-item">
                   <div className="feed-icon" style={{ background: 'var(--ps)' }}>🏠</div>
-                  <div><div className="feed-text" style={{ fontWeight: 700 }}>{String(row.user_id ?? row.id ?? 'Application').slice(0, 12)}</div><div className="feed-time">Pending</div></div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div className="feed-text" style={{ fontWeight: 700 }}>{String(row.full_name ?? row.user_id ?? row.id ?? 'Application').slice(0, 24)}</div>
+                    <div className="feed-time">Application</div>
+                  </div>
                   <button type="button" className="btn btn-g btn-sm" onClick={() => api.STAYS.approveHostApplication(String(row.id)).then(load)}>Approve</button>
                 </div>
               )})}

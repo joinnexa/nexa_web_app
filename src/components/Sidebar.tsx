@@ -31,7 +31,7 @@ const navItems = [
     { to: '/stays', label: 'Stays Dashboard', icon: 'home' },
     { to: '/listings', label: 'Listings', icon: 'layout' },
     { to: '/bookings', label: 'Bookings', icon: 'calendar' },
-    { to: '/hosts', label: 'Hosts', icon: 'users', badgeKey: 'pendingHostApplications' as const },
+    { to: '/hosts', label: 'Host review', icon: 'users', badgeKey: 'pendingHostApplications' as const },
   ]},
   { section: 'System', links: [
     { to: '/admins', label: 'Admin Users', icon: 'settings' },

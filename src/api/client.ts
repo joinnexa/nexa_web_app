@@ -5,6 +5,11 @@ const baseURL =
   envBase ||
   (import.meta.env.DEV ? '/api/v1' : 'http://localhost:3000/api/v1')
 
+/** Same origin as axios `apiClient` (for authenticated media fetch / `<img>` blob URLs). */
+export function getApiBaseUrl(): string {
+  return baseURL
+}
+
 function getToken(): string | null {
   return localStorage.getItem('nexa_admin_token')
 }

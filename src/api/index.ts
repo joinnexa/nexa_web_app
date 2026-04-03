@@ -171,6 +171,11 @@ const STAYS = {
   getStats: () => apiClient.get<StaysStats>('/admin/stays/stats').then((r) => r.data),
   getListings: (params?: { status?: string; limit?: number; offset?: number }) =>
     apiClient.get('/admin/stays/listings', { params }).then((r) => r.data),
+  getListing: (id: string) => apiClient.get(`/admin/stays/listings/${id}`).then((r) => r.data),
+  approveListing: (id: string) => apiClient.post(`/admin/stays/listings/${id}/approve`),
+  rejectListing: (id: string, reason: string) =>
+    apiClient.post(`/admin/stays/listings/${id}/reject`, { reason }),
+  setListingLive: (id: string) => apiClient.post(`/admin/stays/listings/${id}/set-live`),
   getBookings: (params?: { status?: string; limit?: number; offset?: number }) =>
     apiClient.get('/admin/stays/bookings', { params }).then((r) => r.data),
   getHosts: (params?: { status?: string; limit?: number; offset?: number }) =>

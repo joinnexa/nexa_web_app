@@ -21,7 +21,7 @@ const titles: Record<string, string> = {
   '/stays': 'Stays Dashboard',
   '/listings': 'Listings',
   '/bookings': 'Bookings',
-  '/hosts': 'Hosts',
+  '/hosts': 'Host review',
   '/admins': 'Admin Users',
   '/config': 'Configuration',
   '/logs': 'Audit Logs',

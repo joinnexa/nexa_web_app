@@ -27,11 +27,26 @@ export interface KycApplication {
   reviewed_at?: string
   rejection_reason?: string
   document_type?: string
+  document_country?: string
   national_id_number?: string
   national_id_number_extracted?: string
+  full_name?: string
+  kyc_full_name?: string
+  user_full_name?: string
+  email?: string
+  kyc_email?: string
+  user_email?: string
+  city?: string
+  date_of_birth?: string
+  nationality?: string
+  /** Absolute or same-origin paths under /api/v1/kyc/files/… */
+  document_file_url_front?: string | null
+  document_file_url_back?: string | null
+  selfie_file_url?: string | null
   source?: string
   account_type?: string
   documents?: unknown
+  kycProfile?: Record<string, unknown>
 }
 
 export interface AdminTransaction {

@@ -1098,6 +1098,15 @@ svg {
   font-size: 13px;
   color: var(--muted);
   margin-bottom: 28px;
+  line-height: 1.45;
+}
+.login-form-card .login-hint-code {
+  font-size: 12px;
+  font-family: ui-monospace, monospace;
+  color: var(--ink2);
+  background: var(--surf2);
+  padding: 1px 6px;
+  border-radius: 4px;
 }
 .login-form-card label {
   display: block;

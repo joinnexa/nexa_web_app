@@ -13,7 +13,10 @@ import type {
 
 const AUTH = {
   login: (email: string, password: string) =>
-    apiClient.post<{ access_token: string; user: { id: string; email: string; roles?: string[] } }>('/auth/admin/login', { email, password }),
+    apiClient.post<{
+      access_token: string
+      user: { id: string; email: string; role?: string; roles?: string[] }
+    }>('/auth/admin/login', { email, password }),
   logout: () => { clearAuth() },
   setToken: (token: string) => { setAuthToken(token) },
 }
@@ -97,7 +100,14 @@ const DRIVERS = {
 }
 
 const KYC = {
-  getApplications: (params?: { source?: string; status?: string; page?: number; limit?: number; search?: string }) =>
+  getApplications: (params?: {
+    source?: string
+    status?: string
+    page?: number
+    limit?: number
+    search?: string
+    document_category?: string
+  }) =>
     apiClient.get<{ items: KycApplication[]; total?: number } | KycApplication[]>('/admin/kyc/applications', { params }).then((r) => r.data),
   approve: (userId: string, source?: string) =>
     apiClient.post(`/admin/kyc/${userId}/approve`, {}, { params: source ? { source } : {} }),

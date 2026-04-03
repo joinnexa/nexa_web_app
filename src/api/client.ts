@@ -1,6 +1,9 @@
 import axios, { type AxiosInstance } from 'axios'
 
-const baseURL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:3000/api/v1'
+const envBase = import.meta.env.VITE_API_BASE_URL?.trim()
+const baseURL =
+  envBase ||
+  (import.meta.env.DEV ? '/api/v1' : 'http://localhost:3000/api/v1')
 
 function getToken(): string | null {
   return localStorage.getItem('nexa_admin_token')

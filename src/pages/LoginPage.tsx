@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import axios from 'axios'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -17,13 +18,23 @@ export function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      await login(email, password)
+      await login(email.trim(), password)
       navigate(redirect, { replace: true })
     } catch (err: unknown) {
-      const msg = err && typeof err === 'object' && 'response' in err
-        ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
-        : null
-      setError(msg ?? 'Invalid email or password')
+      if (axios.isAxiosError(err)) {
+        if (!err.response && (err.code === 'ERR_NETWORK' || err.message === 'Network Error')) {
+          setError(
+            'Cannot reach the API. Start the Nexa backend on port 3000, or set VITE_API_BASE_URL in .env.'
+          )
+          return
+        }
+        const data = err.response?.data as { message?: string | string[] } | undefined
+        const raw = data?.message
+        const msg = Array.isArray(raw) ? raw.join(', ') : raw
+        setError(typeof msg === 'string' && msg.trim() ? msg : 'Invalid email or password')
+        return
+      }
+      setError('Invalid email or password')
     } finally {
       setLoading(false)
     }
@@ -45,7 +56,11 @@ export function LoginPage() {
       <div className="login-form-panel">
         <div className="login-form-card">
           <h2>Sign in</h2>
-          <p className="form-sub">Use your admin account to continue</p>
+          <p className="form-sub">
+            Use an admin email configured for this environment (e.g.{' '}
+            <code className="login-hint-code">admin@nexa.ma</code> or{' '}
+            <code className="login-hint-code">admin@nexapay.ma</code>).
+          </p>
           <form onSubmit={handleSubmit}>
             <label htmlFor="login-email">Email</label>
             <input

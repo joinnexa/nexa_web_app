@@ -146,6 +146,10 @@ function getBadgeCount(link: { badge?: boolean; badgeKey?: keyof NonNullable<Not
   return n != null && n > 0 ? n : null
 }
 
+function showLiveBadge(link: object): boolean {
+  return 'badge' in link && (link as { badge?: boolean }).badge === true
+}
+
 export function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -182,7 +186,7 @@ export function Sidebar() {
                   <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}>
                     {icons[link.icon]}
                     {link.label}
-                    {link.badge === true && <span className="sb-badge">●</span>}
+                    {showLiveBadge(link) && <span className="sb-badge">●</span>}
                     {count != null && <span className="sb-badge sb-badge-y">{count}</span>}
                   </NavLink>
                 )
@@ -203,7 +207,7 @@ export function Sidebar() {
                     <NavLink key={link.to} to={link.to} className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}>
                       {icons[link.icon]}
                       {link.label}
-                      {link.badge === true && <span className="sb-badge">●</span>}
+                      {showLiveBadge(link) && <span className="sb-badge">●</span>}
                       {count != null && (
                         <span
                           className="sb-badge"

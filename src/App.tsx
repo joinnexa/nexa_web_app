@@ -1,5 +1,4 @@
 import { Routes, Route, Navigate } from 'react-router-dom'
-import { AuthProvider } from './contexts/AuthContext'
 import { ProtectedLayout } from './components/ProtectedLayout'
 import { LoginPage } from './pages/LoginPage'
 import { Overview } from './pages/Overview'
@@ -27,10 +26,9 @@ import { AuditLogs } from './pages/AuditLogs'
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Routes>
-        <Route path="/login" element={<LoginPage />} />
-        <Route element={<ProtectedLayout />}>
+    <Routes>
+      <Route path="/login" element={<LoginPage />} />
+      <Route element={<ProtectedLayout />}>
           <Route path="/" element={<Overview />} />
           <Route path="/activity" element={<LiveActivity />} />
           <Route path="/users" element={<AllUsers />} />
@@ -55,7 +53,6 @@ export default function App() {
           <Route path="/logs" element={<AuditLogs />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AuthProvider>
+    </Routes>
   )
 }

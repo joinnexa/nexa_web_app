@@ -53,7 +53,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (email: string, password: string) => {
     const { data } = await api.AUTH.login(email, password)
     api.AUTH.setToken(data.access_token)
-    const user = data.user ? { id: data.user.id, email: data.user.email, roles: data.user.roles } : null
+    const u = data.user
+    const user = u
+      ? {
+          id: u.id,
+          email: u.email,
+          roles: u.roles ?? (u.role ? [u.role] : undefined),
+        }
+      : null
     localStorage.setItem(TOKEN_KEY, data.access_token)
     if (user) localStorage.setItem(USER_KEY, JSON.stringify(user))
     setState({ token: data.access_token, user, ready: true })

@@ -37,7 +37,7 @@ export function PricingRules() {
   useEffect(() => { load() }, [load])
 
   const handleCellEdit = (row: GoPricingConfig, field: string, newVal: string) => {
-    const oldVal = (row as Record<string, unknown>)[field]
+    const oldVal = (row as unknown as Record<string, unknown>)[field]
     if (oldVal == null && newVal === '') return
     const parsed = field === 'surge_active' || field === 'is_active'
       ? newVal === 'true' || newVal === '1'
@@ -119,7 +119,7 @@ export function PricingRules() {
                         type="text"
                         className="input-sm"
                         style={{ width: 64 }}
-                        defaultValue={String((row as Record<string, unknown>)[field] ?? '')}
+                        defaultValue={String((row as unknown as Record<string, unknown>)[field] ?? '')}
                         onBlur={(e) => handleCellEdit(row, field, e.target.value.trim())}
                       />
                     </td>

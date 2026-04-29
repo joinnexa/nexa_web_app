@@ -57,9 +57,7 @@ export function LoginPage() {
         <div className="login-form-card">
           <h2>Sign in</h2>
           <p className="form-sub">
-            Use an admin email configured for this environment (e.g.{' '}
-            <code className="login-hint-code">admin@nexa.ma</code> or{' '}
-            <code className="login-hint-code">admin@nexapay.ma</code>).
+            Use your authorized administrator account.
           </p>
           <form onSubmit={handleSubmit}>
             <label htmlFor="login-email">Email</label>
@@ -70,7 +68,7 @@ export function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoComplete="email"
-              placeholder="admin@nexa.ma"
+              placeholder="name@company.com"
             />
             <label htmlFor="login-password">Password</label>
             <input

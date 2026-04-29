@@ -25,6 +25,8 @@ export interface KycApplication {
   provider?: string
   submitted_at: string
   reviewed_at?: string
+  last_webhook_event_type?: string | null
+  last_webhook_received_at?: string | null
   rejection_reason?: string
   document_type?: string
   document_country?: string
@@ -134,4 +136,22 @@ export interface AdminWallet {
   balance: number
   created_at: string
   user?: { id: string; phone_number?: string; full_name?: string }
+}
+
+export interface WaitlistEntry {
+  id: string
+  full_name: string
+  phone_number: string
+  city: string
+  email: string
+  how_will_use_nexa?: string | null
+  created_at: string
+}
+
+export interface GoMerchant {
+  merchant_id: string
+  merchant_name: string
+  orders_count: number
+  orders_today: number
+  last_order_at?: string | null
 }

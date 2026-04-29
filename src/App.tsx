@@ -23,6 +23,7 @@ import { Hosts } from './pages/Hosts'
 import { AdminUsers } from './pages/AdminUsers'
 import { Config } from './pages/Config'
 import { AuditLogs } from './pages/AuditLogs'
+import { WaitlistLeads } from './pages/WaitlistLeads'
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/wallets" element={<Wallets />} />
           <Route path="/fraud" element={<FraudRisk />} />
           <Route path="/settlements" element={<Settlements />} />
+          <Route path="/waitlist" element={<WaitlistLeads />} />
           <Route path="/go" element={<GoDashboard />} />
           <Route path="/rides" element={<Rides />} />
           <Route path="/drivers" element={<Drivers />} />

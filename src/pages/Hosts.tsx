@@ -55,6 +55,8 @@ export function Hosts() {
   const [actionBusy, setActionBusy] = useState<string | null>(null)
   const [rejectOpen, setRejectOpen] = useState<{ kind: 'profile' | 'app'; id: string } | null>(null)
   const [rejectReason, setRejectReason] = useState('')
+  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
+  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
 
   const loadStats = useCallback(() => {
     api.STAYS.getStats()
@@ -65,7 +67,11 @@ export function Hosts() {
   const loadVerification = useCallback(() => {
     return api.STAYS
       .getHosts({ status: 'PENDING', limit: 100 })
-      .then((r) => setProfiles(unwrapItems<HostProfileRow>(r)))
+      .then((r) => {
+        const rows = unwrapItems<HostProfileRow>(r)
+        setProfiles(rows)
+        setSelectedProfileId((current) => (current && rows.some((x) => x.id === current) ? current : (rows[0]?.id ?? null)))
+      })
       .catch(() => setProfiles([]))
   }, [])
 
@@ -78,7 +84,11 @@ export function Hosts() {
         const merged = [...unwrapItems<HostAppRow>(a), ...unwrapItems<HostAppRow>(b)]
         const byId = new Map<string, HostAppRow>()
         for (const row of merged) byId.set(row.id, row)
-        setApplications([...byId.values()].sort((x, y) => String(y.created_at ?? '').localeCompare(String(x.created_at ?? ''))))
+        const rows = [...byId.values()].sort((x, y) => String(y.created_at ?? '').localeCompare(String(x.created_at ?? '')))
+        setApplications(rows)
+        setSelectedApplicationId((current) =>
+          current && rows.some((x) => x.id === current) ? current : (rows[0]?.id ?? null),
+        )
       })
       .catch(() => setApplications([]))
   }, [])
@@ -133,6 +143,8 @@ export function Hosts() {
 
   const verified = stats?.approvedHosts ?? 0
   const pendingVerify = stats?.pendingHostVerification ?? profiles.length
+  const selectedProfile = profiles.find((p) => p.id === selectedProfileId) ?? null
+  const selectedApplication = applications.find((a) => a.id === selectedApplicationId) ?? null
 
   return (
     <>
@@ -178,6 +190,8 @@ export function Hosts() {
       </div>
 
       {tab === 'verification' && (
+        <div className="row">
+          <div className="col-2">
         <div className="card">
           <div className="card-hdr">
             <div className="card-title">Host verification</div>
@@ -206,7 +220,14 @@ export function Hosts() {
                 {profiles.map((p) => {
                   const busy = actionBusy === `ap:${p.id}`
                   return (
-                    <tr key={p.id}>
+                    <tr
+                      key={p.id}
+                      onClick={() => setSelectedProfileId(p.id)}
+                      style={{
+                        cursor: 'pointer',
+                        background: selectedProfileId === p.id ? 'var(--surf2)' : undefined,
+                      }}
+                    >
                       <td>
                         <strong>{userLabel(p.user)}</strong>
                       </td>
@@ -244,9 +265,38 @@ export function Hosts() {
             </table>
           </div>
         </div>
+          </div>
+          <div className="col-1">
+            <div className="card" style={{ minHeight: 320 }}>
+              <div className="card-hdr">
+                <div className="card-title">Verification request details</div>
+              </div>
+              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {!selectedProfile && <div className="td-muted">Select a verification request</div>}
+                {selectedProfile && (
+                  <>
+                    <div><strong>Request ID:</strong> <span className="td-mono">{selectedProfile.id}</span></div>
+                    <div><strong>User:</strong> {userLabel(selectedProfile.user)}</div>
+                    <div><strong>User ID:</strong> {(selectedProfile.user_id ?? (selectedProfile.user?.id as string) ?? '—').toString()}</div>
+                    <div><strong>Status:</strong> {selectedProfile.host_verification_status ?? 'PENDING'}</div>
+                    <div><strong>Submitted:</strong> {fmtDate(selectedProfile.submitted_at)}</div>
+                    <details>
+                      <summary style={{ cursor: 'pointer' }}>Raw payload</summary>
+                      <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap' }}>
+                        {JSON.stringify(selectedProfile, null, 2)}
+                      </pre>
+                    </details>
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       )}
 
       {tab === 'applications' && (
+        <div className="row">
+          <div className="col-2">
         <div className="card">
           <div className="card-hdr">
             <div className="card-title">Host applications</div>
@@ -276,7 +326,14 @@ export function Hosts() {
                 {applications.map((a) => {
                   const busy = actionBusy === `aa:${a.id}`
                   return (
-                    <tr key={a.id}>
+                    <tr
+                      key={a.id}
+                      onClick={() => setSelectedApplicationId(a.id)}
+                      style={{
+                        cursor: 'pointer',
+                        background: selectedApplicationId === a.id ? 'var(--surf2)' : undefined,
+                      }}
+                    >
                       <td>
                         <strong>{a.full_name ?? userLabel(a.applicant)}</strong>
                       </td>
@@ -313,6 +370,34 @@ export function Hosts() {
                 })}
               </tbody>
             </table>
+          </div>
+        </div>
+          </div>
+          <div className="col-1">
+            <div className="card" style={{ minHeight: 320 }}>
+              <div className="card-hdr">
+                <div className="card-title">Application details</div>
+              </div>
+              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {!selectedApplication && <div className="td-muted">Select an application</div>}
+                {selectedApplication && (
+                  <>
+                    <div><strong>Application ID:</strong> <span className="td-mono">{selectedApplication.id}</span></div>
+                    <div><strong>Name:</strong> {selectedApplication.full_name ?? userLabel(selectedApplication.applicant)}</div>
+                    <div><strong>Phone:</strong> {selectedApplication.phone_number ?? '—'}</div>
+                    <div><strong>Email:</strong> {selectedApplication.email ?? '—'}</div>
+                    <div><strong>Status:</strong> {selectedApplication.status ?? 'PENDING'}</div>
+                    <div><strong>Submitted:</strong> {fmtDate(selectedApplication.created_at)}</div>
+                    <details>
+                      <summary style={{ cursor: 'pointer' }}>Raw payload</summary>
+                      <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap' }}>
+                        {JSON.stringify(selectedApplication, null, 2)}
+                      </pre>
+                    </details>
+                  </>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

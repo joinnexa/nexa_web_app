@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
-import type { GoMerchant } from '../api/types'
+import type { WaitlistEntry } from '../api/types'
 
-function fmtDate(value?: string | null) {
-  if (!value) return '—'
+function fmtDate(value: string) {
   try {
     return new Date(value).toLocaleString()
   } catch {
@@ -11,8 +10,8 @@ function fmtDate(value?: string | null) {
   }
 }
 
-export function Merchants() {
-  const [data, setData] = useState<GoMerchant[]>([])
+export function WaitlistLeads() {
+  const [rows, setRows] = useState<WaitlistEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
@@ -21,12 +20,12 @@ export function Merchants() {
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
-    api.GO.getMerchants({ page, limit: 20 })
+    api.WAITLIST.getList({ page, limit: 20 })
       .then((res) => {
-        setData(res?.data ?? [])
+        setRows(res?.data ?? [])
         setTotal(res?.total ?? 0)
       })
-      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load merchants'))
+      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load waitlist'))
       .finally(() => setLoading(false))
   }, [page])
 
@@ -36,26 +35,28 @@ export function Merchants() {
 
   return (
     <>
-      <div className="section-title">Merchants</div>
-      <div className="section-sub">Restaurants & stores</div>
+      <div className="section-title">Waitlist Leads</div>
+      <div className="section-sub">Submissions from public web forms (Pay/Go/Stays)</div>
       {error && <div className="alert alert-r">{error}</div>}
+
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
-        <div className="stat-card o">
-          <div className="stat-label">TOTAL MERCHANTS</div>
+        <div className="stat-card y">
+          <div className="stat-label">TOTAL LEADS</div>
           <div className="stat-val">{total.toLocaleString()}</div>
         </div>
         <div className="stat-card g">
-          <div className="stat-label">ORDERS TODAY</div>
-          <div className="stat-val">{data.reduce((sum, row) => sum + (row.orders_today ?? 0), 0).toLocaleString()}</div>
-        </div>
-        <div className="stat-card y">
           <div className="stat-label">VISIBLE ON PAGE</div>
-          <div className="stat-val">{data.length}</div>
+          <div className="stat-val">{rows.length}</div>
+        </div>
+        <div className="stat-card o">
+          <div className="stat-label">UNIQUE EMAILS</div>
+          <div className="stat-val">{new Set(rows.map((r) => r.email)).size}</div>
         </div>
       </div>
+
       <div className="card">
         <div className="card-hdr">
-          <div className="card-title">Merchant Directory</div>
+          <div className="card-title">Lead List</div>
           <div className="card-actions">
             <button type="button" className="btn btn-dark btn-sm" onClick={load} disabled={loading}>
               Refresh
@@ -66,35 +67,37 @@ export function Merchants() {
           <table>
             <thead>
               <tr>
-                <th>Merchant ID</th>
-                <th>Merchant</th>
-                <th>Orders (total)</th>
-                <th>Orders (today)</th>
-                <th>Last order</th>
+                <th>Created</th>
+                <th>Full name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>City</th>
+                <th>Intent</th>
               </tr>
             </thead>
             <tbody>
-              {loading && data.length === 0 && (
+              {loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="td-muted" style={{ padding: 16 }}>
+                  <td colSpan={6} className="td-muted" style={{ padding: 16 }}>
                     Loading…
                   </td>
                 </tr>
               )}
-              {!loading && data.length === 0 && (
+              {!loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="td-muted" style={{ padding: 16 }}>
-                    No merchants found
+                  <td colSpan={6} className="td-muted" style={{ padding: 16 }}>
+                    No waitlist leads yet
                   </td>
                 </tr>
               )}
-              {data.map((row) => (
-                <tr key={row.merchant_id}>
-                  <td className="td-mono">{row.merchant_id.slice(0, 8)}…</td>
-                  <td>{row.merchant_name}</td>
-                  <td>{row.orders_count.toLocaleString()}</td>
-                  <td>{row.orders_today.toLocaleString()}</td>
-                  <td>{fmtDate(row.last_order_at)}</td>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>{fmtDate(row.created_at)}</td>
+                  <td>{row.full_name}</td>
+                  <td>{row.email}</td>
+                  <td>{row.phone_number}</td>
+                  <td>{row.city}</td>
+                  <td>{row.how_will_use_nexa || '—'}</td>
                 </tr>
               ))}
             </tbody>

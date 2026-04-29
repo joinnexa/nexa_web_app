@@ -8,15 +8,52 @@ function formatAmount(n: number) {
 }
 
 export function Settlements() {
+  type PayoutStatus = 'ALL' | 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED'
+  type PayoutRow = {
+    id: string
+    recipient_name: string
+    recipient_type: string
+    pending_balance: number | null
+    status: string
+    updated_at?: string | null
+  }
+
   const [summary, setSummary] = useState<{
     pendingPayoutsAmount?: number
     settledThisWeekAmount?: number
     recipientsCount?: number
     nextBatchDate?: string
   } | null>(null)
-  const [payouts, setPayouts] = useState<Array<{ id: string; driver_name?: string; pending_balance?: number; status?: string }>>([])
+  const [payouts, setPayouts] = useState<PayoutRow[]>([])
+  const [statusFilter, setStatusFilter] = useState<PayoutStatus>('ALL')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const normalizePayout = (row: Record<string, unknown>): PayoutRow => {
+    const recipientName =
+      (row.recipient_name as string | undefined) ||
+      (row.driver_name as string | undefined) ||
+      (row.courier_name as string | undefined) ||
+      (row.merchant_name as string | undefined) ||
+      (row.full_name as string | undefined) ||
+      (row.user_name as string | undefined) ||
+      String(row.id ?? 'Unknown')
+
+    const recipientType =
+      (row.recipient_type as string | undefined) ||
+      (row.user_type as string | undefined) ||
+      ((row.merchant_name as string | undefined) ? 'MERCHANT' : 'DRIVER/COURIER')
+
+    return {
+      id: String(row.id ?? recipientName),
+      recipient_name: recipientName,
+      recipient_type: recipientType,
+      pending_balance:
+        row.pending_balance != null ? Number(row.pending_balance) : row.amount != null ? Number(row.amount) : null,
+      status: String((row.status as string | undefined) || 'PENDING').toUpperCase(),
+      updated_at: (row.updated_at as string | undefined) || (row.created_at as string | undefined) || null,
+    }
+  }
 
   const load = useCallback(() => {
     setLoading(true)
@@ -27,13 +64,20 @@ export function Settlements() {
     ])
       .then(([sum, list]) => {
         if (sum) setSummary(sum)
-        setPayouts(Array.isArray(list) ? list.slice(0, 20) : (list as { data?: unknown[] })?.data?.slice(0, 20) ?? [])
+        const rawRows = Array.isArray(list) ? list : (list as { data?: unknown[] })?.data ?? []
+        setPayouts(rawRows.slice(0, 100).map((r) => normalizePayout(r as Record<string, unknown>)))
       })
       .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load'))
       .finally(() => setLoading(false))
   }, [])
 
   useEffect(() => { load() }, [load])
+
+  const filtered = payouts.filter((p) => statusFilter === 'ALL' || p.status === statusFilter)
+  const pendingCount = payouts.filter((p) => p.status === 'PENDING').length
+  const processingCount = payouts.filter((p) => p.status === 'PROCESSING').length
+  const paidCount = payouts.filter((p) => p.status === 'PAID' || p.status === 'SETTLED').length
+  const failedCount = payouts.filter((p) => p.status === 'FAILED' || p.status === 'ERROR').length
 
   if (loading && !summary) return <div className="section-title">Settlements</div>
   if (error && !summary) return <><div className="section-title">Settlements</div><div className="alert alert-r">{error}</div></>
@@ -59,17 +103,48 @@ export function Settlements() {
         </div>
       </div>
       <div className="card">
-        <div className="card-hdr"><div className="card-title">Driver & Courier Payouts (sample)</div><button type="button" className="btn btn-dark btn-sm" onClick={load}>Refresh</button></div>
+        <div className="card-hdr">
+          <div className="card-title">Payout Operations</div>
+          <div className="card-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <label style={{ fontSize: 12 }} className="td-muted">
+              Status
+            </label>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as PayoutStatus)}
+              style={{ padding: '4px 8px', borderRadius: 6 }}
+            >
+              <option value="ALL">All</option>
+              <option value="PENDING">Pending</option>
+              <option value="PROCESSING">Processing</option>
+              <option value="PAID">Paid</option>
+              <option value="FAILED">Failed</option>
+            </select>
+            <button type="button" className="btn btn-dark btn-sm" onClick={load}>Refresh</button>
+          </div>
+        </div>
+        <div className="card-body td-muted" style={{ display: 'flex', gap: 16, flexWrap: 'wrap', paddingBottom: 8 }}>
+          <span>Pending: {pendingCount}</span>
+          <span>Processing: {processingCount}</span>
+          <span>Paid: {paidCount}</span>
+          <span>Failed: {failedCount}</span>
+        </div>
         <div className="table-wrap">
           <table>
-            <thead><tr><th>Driver / Courier</th><th>Pending</th><th>Status</th></tr></thead>
+            <thead><tr><th>Recipient</th><th>Type</th><th>Pending</th><th>Status</th><th>Updated</th></tr></thead>
             <tbody>
-              {payouts.length === 0 && <tr><td colSpan={3} className="td-muted" style={{ padding: 16 }}>No payouts</td></tr>}
-              {payouts.map((p) => (
+              {filtered.length === 0 && <tr><td colSpan={5} className="td-muted" style={{ padding: 16 }}>No payouts</td></tr>}
+              {filtered.map((p) => (
                 <tr key={p.id}>
-                  <td>{p.driver_name ?? p.id}</td>
+                  <td>{p.recipient_name}</td>
+                  <td><span className="badge badge-b">{p.recipient_type}</span></td>
                   <td>{p.pending_balance != null ? `${Number(p.pending_balance).toFixed(2)} MAD` : '—'}</td>
-                  <td><span className={`badge ${p.status === 'PENDING' ? 'badge-y' : 'badge-g'}`}>{p.status ?? '—'}</span></td>
+                  <td>
+                    <span className={`badge ${p.status === 'PENDING' ? 'badge-y' : p.status === 'FAILED' || p.status === 'ERROR' ? 'badge-r' : 'badge-g'}`}>
+                      {p.status ?? '—'}
+                    </span>
+                  </td>
+                  <td className="td-muted">{p.updated_at ? new Date(p.updated_at).toLocaleString() : '—'}</td>
                 </tr>
               ))}
             </tbody>

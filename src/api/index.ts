@@ -9,6 +9,8 @@ import type {
   StaysStats,
   AdminUser,
   AdminWallet,
+  WaitlistEntry,
+  GoMerchant,
 } from './types'
 
 const AUTH = {
@@ -49,6 +51,8 @@ const GO = {
     apiClient.get<{ data: unknown[]; total: number; page: number; limit: number }>('/admin/go/rides', { params }).then((r) => r.data),
   getDeliveryOrders: (params?: { page?: number; limit?: number; status?: string }) =>
     apiClient.get<{ data: unknown[]; total: number; page: number; limit: number }>('/admin/go/delivery/orders', { params }).then((r) => r.data),
+  getMerchants: (params?: { page?: number; limit?: number }) =>
+    apiClient.get<{ data: GoMerchant[]; total: number; page: number; limit: number }>('/admin/go/merchants', { params }).then((r) => r.data),
   getPricing: () =>
     apiClient.get<GoPricingConfig[]>('/admin/go/pricing').then((r) => r.data),
   getPricingHistory: () =>
@@ -109,10 +113,6 @@ const KYC = {
     document_category?: string
   }) =>
     apiClient.get<{ items: KycApplication[]; total?: number } | KycApplication[]>('/admin/kyc/applications', { params }).then((r) => r.data),
-  approve: (userId: string, source?: string) =>
-    apiClient.post(`/admin/kyc/${userId}/approve`, {}, { params: source ? { source } : {} }),
-  reject: (userId: string, reason: string, source?: string) =>
-    apiClient.post(`/admin/kyc/${userId}/reject`, { reason }, { params: source ? { source } : {} }),
 }
 
 const TRANSACTIONS = {
@@ -200,6 +200,16 @@ const NOTIFICATIONS = {
     ).then((r) => r.data),
 }
 
+const WAITLIST = {
+  getList: (params?: { page?: number; limit?: number }) =>
+    apiClient
+      .get<{ data: WaitlistEntry[]; total: number; page: number; limit: number; total_pages: number }>(
+        '/admin/waitlist',
+        { params },
+      )
+      .then((r) => r.data),
+}
+
 export const api = {
   AUTH,
   DASHBOARD,
@@ -218,6 +228,7 @@ export const api = {
   STAYS,
   SEARCH,
   NOTIFICATIONS,
+  WAITLIST,
 }
 
 export type { DashboardStats, KycApplication, AdminTransaction, RiskAlert, AuditLogEntry, FeatureFlag, StaysStats, AdminUser, AdminWallet }

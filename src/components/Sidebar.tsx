@@ -13,6 +13,7 @@ const navItems = [
   ]},
   { product: 'NEXA PAY', color: 'var(--y)', links: [
     { to: '/pay', label: 'Pay Dashboard', icon: 'credit' },
+    { to: '/waitlist', label: 'Waitlist Leads', icon: 'users' },
     { to: '/kyc', label: 'KYC Review', icon: 'user-check', badgeKey: 'pendingKyc' as const },
     { to: '/transactions', label: 'Transactions', icon: 'dollar' },
     { to: '/wallets', label: 'Wallets', icon: 'wallet' },
@@ -150,10 +151,18 @@ function showLiveBadge(link: object): boolean {
   return 'badge' in link && (link as { badge?: boolean }).badge === true
 }
 
+function getEnvBadge() {
+  const raw = (import.meta.env.VITE_APP_ENV || import.meta.env.MODE || 'development').toString().toLowerCase()
+  if (raw === 'production' || raw === 'prod') return 'PROD'
+  if (raw === 'staging' || raw === 'stage') return 'STAGE'
+  return 'DEV'
+}
+
 export function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState<NotifSummary>(null)
+  const envBadge = getEnvBadge()
 
   useEffect(() => {
     api.NOTIFICATIONS.getSummary()
@@ -172,7 +181,7 @@ export function Sidebar() {
           <div className="sb-brand-name">Nexa Admin</div>
           <div className="sb-brand-sub">Ecosystem Dashboard</div>
         </div>
-        <span className="env-badge">PROD</span>
+        <span className="env-badge">{envBadge}</span>
       </div>
 
       {navItems.map((block, i) => (

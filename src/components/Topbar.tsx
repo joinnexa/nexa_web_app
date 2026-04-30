@@ -332,7 +332,7 @@ export function Topbar({ onOpenMobileMenu }: TopbarProps) {
 
         <button
           type="button"
-          className="topbar-btn"
+          className="topbar-btn topbar-btn-desktop-only"
           title="Settings"
           onClick={() => {
             navigate('/config')

@@ -1368,8 +1368,10 @@ svg {
 
 /* ─── RESPONSIVE ─── */
 @media (max-width: 1200px) {
+  /* !important overrides inline gridTemplateColumns on pages (repeat(3|4,...)) */
   .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px;
   }
   :root {
     --sidebar: 240px;
@@ -1379,13 +1381,62 @@ svg {
   .topbar-menu-btn {
     display: flex;
   }
-  .topbar-search {
-    width: min(200px, 36vw);
+
+  /* Two-row top bar: title row + full-width search; avoids overlap and crowding */
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--topbar-h);
+    padding-top: max(8px, env(safe-area-inset-top, 0px));
+    padding-bottom: 10px;
+    padding-left: max(12px, env(safe-area-inset-left, 0px));
+    padding-right: max(12px, env(safe-area-inset-right, 0px));
+    gap: 8px 10px;
+    align-items: center;
+    align-content: center;
+    row-gap: 10px;
   }
+  .topbar-breadcrumb {
+    display: none;
+  }
+  .topbar-left {
+    flex: 1 1 auto;
+    min-width: 0;
+    order: 1;
+  }
+  .topbar-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: min(220px, 42vw);
+  }
+  /* Row 1: title + actions · Row 2: search (must follow DOM middle child) */
+  .topbar-actions {
+    flex-shrink: 0;
+    gap: 5px;
+    order: 2;
+  }
+  .topbar-search {
+    flex: 1 1 100%;
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+    margin-left: 0;
+    order: 3;
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+  .topbar-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+  }
+
   .sidebar {
     position: fixed;
     left: 0;
     top: 0;
+    padding-top: env(safe-area-inset-top, 0px);
     z-index: 300;
     transform: translateX(-100%);
     transition: transform 0.28s ease;
@@ -1395,14 +1446,30 @@ svg {
   .sidebar.drawer-open {
     transform: translateX(0);
   }
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
-  }
   .row {
     flex-direction: column;
   }
   .content {
-    padding: 18px 16px 28px;
+    padding: 18px 16px max(28px, env(safe-area-inset-bottom));
+  }
+}
+
+/* Narrow phones: denser toolbar, hide redundant settings (available in Quick actions) */
+@media (max-width: 560px) {
+  .topbar .env-pill {
+    display: none;
+  }
+  .topbar-btn-desktop-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .topbar-actions {
+    gap: 4px;
+  }
+  .dropdown-panel {
+    max-width: calc(100vw - 24px);
   }
 }
 

@@ -39,6 +39,7 @@ const navItems = [
   ]},
   { section: 'System', links: [
     { to: '/admins', label: 'Admin Users', icon: 'settings' },
+    { to: '/operations', label: 'Operations', icon: 'layout' },
     { to: '/config', label: 'Config', icon: 'settings' },
     { to: '/logs', label: 'Audit Logs', icon: 'file' },
   ]},

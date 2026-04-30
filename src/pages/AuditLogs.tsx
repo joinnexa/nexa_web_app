@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api } from '../api'
+import { api, downloadBlob } from '../api'
 import type { AuditLogEntry } from '../api/types'
 
 export function AuditLogs() {
   const [data, setData] = useState<AuditLogEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [exporting, setExporting] = useState(false)
 
   const load = useCallback(() => {
     setLoading(true)
@@ -27,7 +28,26 @@ export function AuditLogs() {
       <div className="section-sub">All admin actions — immutable log · <code style={{ fontSize: 11, background: 'var(--surf2)', padding: '2px 6px', borderRadius: 4 }}>/admin/audit/logs</code></div>
       {error && <div className="alert alert-r">{error}</div>}
       <div className="card">
-        <div className="card-hdr"><div className="card-title">Recent Actions</div></div>
+        <div className="card-hdr">
+          <div className="card-title">Recent Actions</div>
+          <div className="card-actions">
+            <button
+              type="button"
+              className="btn btn-sm"
+              disabled={exporting}
+              onClick={() => {
+                setExporting(true)
+                api.AUDIT
+                  .exportLogsCsv({ limit: 5000 })
+                  .then((blob) => downloadBlob(blob, 'audit-logs.csv'))
+                  .catch((e) => setError(e?.response?.data?.message ?? e.message ?? 'Export failed'))
+                  .finally(() => setExporting(false))
+              }}
+            >
+              {exporting ? 'Export…' : 'Export CSV'}
+            </button>
+          </div>
+        </div>
         <div className="table-wrap">
           <table>
             <thead><tr><th>Action</th><th>Admin</th><th>Target</th><th>IP</th><th>Time</th></tr></thead>

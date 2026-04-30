@@ -24,6 +24,7 @@ import { AdminUsers } from './pages/AdminUsers'
 import { Config } from './pages/Config'
 import { AuditLogs } from './pages/AuditLogs'
 import { WaitlistLeads } from './pages/WaitlistLeads'
+import { Operations } from './pages/Operations'
 
 export default function App() {
   return (
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/admins" element={<AdminUsers />} />
           <Route path="/config" element={<Config />} />
           <Route path="/logs" element={<AuditLogs />} />
+          <Route path="/operations" element={<Operations />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

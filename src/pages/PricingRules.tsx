@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { api, type GoPricingConfig } from '../api'
+import { api, type GoPricingAuditEntry, type GoPricingConfig } from '../api'
 
 const NUMERIC_FIELDS = [
   'base_fare',
@@ -24,6 +24,18 @@ export function PricingRules() {
     newValue: string | number | boolean
   } | null>(null)
   const [saving, setSaving] = useState(false)
+  const [historyOpen, setHistoryOpen] = useState(false)
+  const [hist, setHist] = useState<GoPricingAuditEntry[]>([])
+  const [histLoading, setHistLoading] = useState(false)
+
+  const loadHist = useCallback(() => {
+    setHistLoading(true)
+    api.GO
+      .getPricingHistory()
+      .then((rows) => setHist(Array.isArray(rows) ? rows : []))
+      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load history'))
+      .finally(() => setHistLoading(false))
+  }, [])
 
   const load = useCallback(() => {
     setLoading(true)
@@ -88,7 +100,20 @@ export function PricingRules() {
       <div className="card">
         <div className="card-hdr">
           <div className="card-title">Vehicle Type Rates</div>
-          <button type="button" className="btn btn-dark btn-sm" onClick={load}>Refresh</button>
+          <div className="card-actions">
+            <button
+              type="button"
+              className="btn btn-sm"
+              onClick={() => {
+                const next = !historyOpen
+                setHistoryOpen(next)
+                if (next) loadHist()
+              }}
+            >
+              {historyOpen ? 'Hide audit log' : 'Show audit log'}
+            </button>
+            <button type="button" className="btn btn-dark btn-sm" onClick={load}>Refresh rates</button>
+          </div>
         </div>
         <div className="table-wrap">
           <table>
@@ -139,6 +164,57 @@ export function PricingRules() {
           </table>
         </div>
       </div>
+
+      {historyOpen && (
+        <div className="card" style={{ marginTop: 16 }}>
+          <div className="card-hdr">
+            <div className="card-title">Pricing change history</div>
+            <button type="button" className="btn btn-dark btn-sm" onClick={() => loadHist()} disabled={histLoading}>
+              {histLoading ? 'Loading…' : 'Reload'}
+            </button>
+          </div>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>When</th>
+                  <th>Vehicle</th>
+                  <th>Field</th>
+                  <th>Old</th>
+                  <th>New</th>
+                  <th>By</th>
+                </tr>
+              </thead>
+              <tbody>
+                {histLoading && hist.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="td-muted" style={{ padding: 16 }}>
+                      Loading…
+                    </td>
+                  </tr>
+                )}
+                {!histLoading && hist.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="td-muted" style={{ padding: 16 }}>
+                      No audit rows yet
+                    </td>
+                  </tr>
+                )}
+                {hist.map((h) => (
+                  <tr key={h.id}>
+                    <td className="td-muted">{h.changed_at ? new Date(h.changed_at).toLocaleString() : '—'}</td>
+                    <td>{h.vehicle_type}</td>
+                    <td>{h.field_name}</td>
+                    <td className="td-mono">{h.old_value ?? '—'}</td>
+                    <td className="td-mono">{h.new_value ?? '—'}</td>
+                    <td>{h.changed_by}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {editModal && (
         <div className="modal-overlay" role="dialog" aria-modal="true">

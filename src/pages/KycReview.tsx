@@ -31,6 +31,28 @@ function KycDetailModal({
   row: KycApplication
   onClose: () => void
 }) {
+  const [merged, setMerged] = useState<KycApplication>(row)
+  const [caseLoading, setCaseLoading] = useState(true)
+
+  useEffect(() => {
+    setMerged(row)
+    setCaseLoading(true)
+    let cancelled = false
+    api.KYC.getCase(row.id)
+      .then((c) => {
+        if (!cancelled) setMerged((prev) => ({ ...prev, ...c }))
+      })
+      .catch(() => {
+        /* keep list row data */
+      })
+      .finally(() => {
+        if (!cancelled) setCaseLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [row.id])
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -38,6 +60,8 @@ function KycDetailModal({
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [onClose])
+
+  const d = merged
 
   return (
     <div
@@ -73,13 +97,13 @@ function KycDetailModal({
         <div className="card-hdr" style={{ position: 'sticky', top: 0, zIndex: 1, background: 'var(--surf, #12141c)' }}>
           <div>
             <div id="kyc-modal-title" className="card-title">
-              {row.full_name || row.user_name || 'Applicant'}
+              {caseLoading ? 'Loading case…' : d.full_name || d.user_name || 'Applicant'}
             </div>
             <div className="section-sub" style={{ marginTop: 4 }}>
-              {row.user_phone && <span>{row.user_phone}</span>}
-              {row.user_phone && row.user_id && ' · '}
+              {d.user_phone && <span>{d.user_phone}</span>}
+              {d.user_phone && d.user_id && ' · '}
               <span className="td-mono" style={{ fontSize: 12 }}>
-                {row.user_id}
+                {d.user_id}
               </span>
             </div>
           </div>
@@ -106,38 +130,38 @@ function KycDetailModal({
                     <td className="td-muted" style={{ padding: '6px 8px 6px 0', verticalAlign: 'top' }}>
                       Full name
                     </td>
-                    <td style={{ padding: '6px 0' }}>{row.full_name || row.kyc_full_name || row.user_name || '—'}</td>
+                    <td style={{ padding: '6px 0' }}>{d.full_name || d.kyc_full_name || d.user_name || '—'}</td>
                   </tr>
                   <tr>
                     <td className="td-muted" style={{ padding: '6px 8px 6px 0' }}>
                       Email
                     </td>
-                    <td style={{ padding: '6px 0' }}>{row.email || '—'}</td>
+                    <td style={{ padding: '6px 0' }}>{d.email || '—'}</td>
                   </tr>
                   <tr>
                     <td className="td-muted" style={{ padding: '6px 8px 6px 0' }}>
                       City
                     </td>
-                    <td style={{ padding: '6px 0' }}>{row.city || '—'}</td>
+                    <td style={{ padding: '6px 0' }}>{d.city || '—'}</td>
                   </tr>
                   <tr>
                     <td className="td-muted" style={{ padding: '6px 8px 6px 0' }}>
                       Date of birth
                     </td>
-                    <td style={{ padding: '6px 0' }}>{row.date_of_birth || '—'}</td>
+                    <td style={{ padding: '6px 0' }}>{d.date_of_birth || '—'}</td>
                   </tr>
                   <tr>
                     <td className="td-muted" style={{ padding: '6px 8px 6px 0' }}>
                       Nationality
                     </td>
-                    <td style={{ padding: '6px 0' }}>{row.nationality || '—'}</td>
+                    <td style={{ padding: '6px 0' }}>{d.nationality || '—'}</td>
                   </tr>
                   <tr>
                     <td className="td-muted" style={{ padding: '6px 8px 6px 0' }}>
                       Provider
                     </td>
                     <td style={{ padding: '6px 0' }}>
-                      {(row.provider || 'SUMSUB').toUpperCase()}
+                      {(d.provider || 'SUMSUB').toUpperCase()}
                     </td>
                   </tr>
                   <tr>
@@ -145,21 +169,21 @@ function KycDetailModal({
                       Source
                     </td>
                     <td style={{ padding: '6px 0' }}>
-                      {row.source || 'PAY'}
+                      {d.source || 'PAY'}
                     </td>
                   </tr>
                   <tr>
                     <td className="td-muted" style={{ padding: '6px 8px 6px 0' }}>
                       Last webhook event
                     </td>
-                    <td style={{ padding: '6px 0' }}>{row.last_webhook_event_type || '—'}</td>
+                    <td style={{ padding: '6px 0' }}>{d.last_webhook_event_type || '—'}</td>
                   </tr>
                   <tr>
                     <td className="td-muted" style={{ padding: '6px 8px 6px 0' }}>
                       Last webhook received
                     </td>
                     <td style={{ padding: '6px 0' }}>
-                      {row.last_webhook_received_at ? new Date(row.last_webhook_received_at).toLocaleString() : '—'}
+                      {d.last_webhook_received_at ? new Date(d.last_webhook_received_at).toLocaleString() : '—'}
                     </td>
                   </tr>
                   <tr>
@@ -167,7 +191,7 @@ function KycDetailModal({
                       Status
                     </td>
                     <td style={{ padding: '6px 0' }}>
-                      <span className={toBadge(row.status || '')}>{row.status || '—'}</span>
+                      <span className={toBadge(d.status || '')}>{d.status || '—'}</span>
                     </td>
                   </tr>
                   <tr>
@@ -175,7 +199,7 @@ function KycDetailModal({
                       Submitted
                     </td>
                     <td className="td-muted" style={{ padding: '6px 0' }}>
-                      {row.submitted_at ? new Date(row.submitted_at).toLocaleString() : '—'}
+                      {d.submitted_at ? new Date(d.submitted_at).toLocaleString() : '—'}
                     </td>
                   </tr>
                   <tr>
@@ -183,7 +207,7 @@ function KycDetailModal({
                       Last webhook summary
                     </td>
                     <td className="td-muted" style={{ padding: '6px 0' }}>
-                      {fmtWebhookEvent(row)}
+                      {fmtWebhookEvent(d)}
                     </td>
                   </tr>
                 </tbody>
@@ -197,17 +221,17 @@ function KycDetailModal({
               <div style={{ marginTop: 12, display: 'grid', gap: 8, fontSize: 13 }}>
                 <div>
                   <strong>Decision status:</strong>{' '}
-                  <span className={toBadge(row.status || '')}>{row.status || '—'}</span>
+                  <span className={toBadge(d.status || '')}>{d.status || '—'}</span>
                 </div>
                 <div>
-                  <strong>Last event:</strong> {row.last_webhook_event_type || '—'}
+                  <strong>Last event:</strong> {d.last_webhook_event_type || '—'}
                 </div>
                 <div>
                   <strong>Last event time:</strong>{' '}
-                  {row.last_webhook_received_at ? new Date(row.last_webhook_received_at).toLocaleString() : '—'}
+                  {d.last_webhook_received_at ? new Date(d.last_webhook_received_at).toLocaleString() : '—'}
                 </div>
                 <div>
-                  <strong>Reviewed at:</strong> {row.reviewed_at ? new Date(row.reviewed_at).toLocaleString() : '—'}
+                  <strong>Reviewed at:</strong> {d.reviewed_at ? new Date(d.reviewed_at).toLocaleString() : '—'}
                 </div>
               </div>
             </div>

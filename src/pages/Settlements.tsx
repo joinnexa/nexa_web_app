@@ -8,7 +8,7 @@ function formatAmount(n: number) {
 }
 
 export function Settlements() {
-  type PayoutStatus = 'ALL' | 'PENDING' | 'PROCESSING' | 'PAID' | 'FAILED'
+  type PayoutStatus = 'ALL' | 'PENDING' | 'PROCESSING' | 'PAID' | 'SETTLED' | 'FAILED'
   type PayoutRow = {
     id: string
     recipient_name: string
@@ -25,6 +25,8 @@ export function Settlements() {
     nextBatchDate?: string
   } | null>(null)
   const [payouts, setPayouts] = useState<PayoutRow[]>([])
+  const [merchants, setMerchants] = useState<PayoutRow[]>([])
+  const [bucket, setBucket] = useState<'drivers' | 'merchants'>('drivers')
   const [statusFilter, setStatusFilter] = useState<PayoutStatus>('ALL')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -61,11 +63,25 @@ export function Settlements() {
     Promise.all([
       api.FINANCE.getSettlementsSummary().catch(() => null),
       api.FINANCE.getDriverPayouts().catch(() => []),
+      api.FINANCE.getMerchantSettlements().catch(() => []),
     ])
-      .then(([sum, list]) => {
+      .then(([sum, list, merch]) => {
         if (sum) setSummary(sum)
         const rawRows = Array.isArray(list) ? list : (list as { data?: unknown[] })?.data ?? []
         setPayouts(rawRows.slice(0, 100).map((r) => normalizePayout(r as Record<string, unknown>)))
+        const mRows = Array.isArray( merch) ? merch : []
+        setMerchants(
+          mRows.slice(0, 200).map((r) => {
+            const row = r as Record<string, unknown>
+            return normalizePayout({
+              ...row,
+              recipient_name: row.merchant_name,
+              recipient_type: 'MERCHANT',
+              pending_balance:
+                row.net_amount != null ? Number(row.net_amount) : row.amount != null ? Number(row.amount) : null,
+            })
+          }),
+        )
       })
       .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load'))
       .finally(() => setLoading(false))
@@ -73,11 +89,12 @@ export function Settlements() {
 
   useEffect(() => { load() }, [load])
 
-  const filtered = payouts.filter((p) => statusFilter === 'ALL' || p.status === statusFilter)
-  const pendingCount = payouts.filter((p) => p.status === 'PENDING').length
-  const processingCount = payouts.filter((p) => p.status === 'PROCESSING').length
-  const paidCount = payouts.filter((p) => p.status === 'PAID' || p.status === 'SETTLED').length
-  const failedCount = payouts.filter((p) => p.status === 'FAILED' || p.status === 'ERROR').length
+  const activeList = bucket === 'drivers' ? payouts : merchants
+  const filtered = activeList.filter((p) => statusFilter === 'ALL' || p.status === statusFilter)
+  const pendingCount = activeList.filter((p) => p.status === 'PENDING').length
+  const processingCount = activeList.filter((p) => p.status === 'PROCESSING').length
+  const paidCount = activeList.filter((p) => p.status === 'PAID' || p.status === 'SETTLED').length
+  const failedCount = activeList.filter((p) => p.status === 'FAILED' || p.status === 'ERROR').length
 
   if (loading && !summary) return <div className="section-title">Settlements</div>
   if (error && !summary) return <><div className="section-title">Settlements</div><div className="alert alert-r">{error}</div></>
@@ -104,7 +121,21 @@ export function Settlements() {
       </div>
       <div className="card">
         <div className="card-hdr">
-          <div className="card-title">Payout Operations</div>
+          <div className="card-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center' }}>
+            <div className="tabs">
+              <button type="button" className={`tab ${bucket === 'drivers' ? 'active' : ''}`} onClick={() => setBucket('drivers')}>
+                Drivers & couriers
+              </button>
+              <button type="button" className={`tab ${bucket === 'merchants' ? 'active' : ''}`} onClick={() => setBucket('merchants')}>
+                Merchants
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="card">
+        <div className="card-hdr">
+          <div className="card-title">{bucket === 'drivers' ? 'Payout operations (drivers)' : 'Merchant settlements'}</div>
           <div className="card-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <label style={{ fontSize: 12 }} className="td-muted">
               Status
@@ -118,6 +149,7 @@ export function Settlements() {
               <option value="PENDING">Pending</option>
               <option value="PROCESSING">Processing</option>
               <option value="PAID">Paid</option>
+              <option value="SETTLED">Settled</option>
               <option value="FAILED">Failed</option>
             </select>
             <button type="button" className="btn btn-dark btn-sm" onClick={load}>Refresh</button>

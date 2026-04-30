@@ -10,9 +10,17 @@ function formatVol(n: number) {
   return String(n)
 }
 
+type CommissionSummary = {
+  total_commissions?: number
+  nexapay_commissions?: number
+  nexago_commissions?: number
+  nexago_delivery_commissions?: number
+}
+
 export function PayDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null)
   const [revenue, setRevenue] = useState<{ daily_revenue?: number; monthly_revenue?: number; total?: number } | null>(null)
+  const [commissions, setCommissions] = useState<CommissionSummary | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -25,11 +33,17 @@ export function PayDashboard() {
     Promise.all([
       api.DASHBOARD.getStats().catch((e) => e),
       api.FINANCE.getRevenue().catch(() => null),
+      api.FINANCE.getCommissions({ limit: 1 }).catch(() => null),
     ])
-      .then(([s, r]) => {
+      .then(([s, r, comm]) => {
         if (s && !(s instanceof Error)) setStats(s)
         else if (!bg && s instanceof Error) setError(s?.message ?? 'Failed to load')
         if (r && typeof r === 'object') setRevenue(r)
+        const summary =
+          comm && typeof comm === 'object' && 'summary' in comm
+            ? (comm as { summary?: CommissionSummary }).summary
+            : undefined
+        if (summary) setCommissions(summary)
       })
       .catch((e) => {
         if (!bg) setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load')
@@ -62,6 +76,26 @@ export function PayDashboard() {
         <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(2,1fr)', marginTop: 16 }}>
           <div className="stat-card y"><div className="stat-label">DAILY REVENUE</div><div className="stat-val">{revenue.daily_revenue != null ? formatVol(revenue.daily_revenue) : '—'} MAD</div></div>
           <div className="stat-card g"><div className="stat-label">MONTHLY REVENUE</div><div className="stat-val">{revenue.monthly_revenue != null ? formatVol(revenue.monthly_revenue) : '—'} MAD</div></div>
+        </div>
+      )}
+      {commissions && commissions.total_commissions != null && (
+        <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(4,1fr)', marginTop: 16 }}>
+          <div className="stat-card b">
+            <div className="stat-label">COMMISSIONS (TOTAL)</div>
+            <div className="stat-val">{formatVol(commissions.total_commissions)} MAD</div>
+          </div>
+          <div className="stat-card y">
+            <div className="stat-label">NEXA PAY</div>
+            <div className="stat-val">{commissions.nexapay_commissions != null ? formatVol(commissions.nexapay_commissions) : '—'}</div>
+          </div>
+          <div className="stat-card v">
+            <div className="stat-label">NEXA GO RIDES</div>
+            <div className="stat-val">{commissions.nexago_commissions != null ? formatVol(commissions.nexago_commissions) : '—'}</div>
+          </div>
+          <div className="stat-card p">
+            <div className="stat-label">NEXA GO DELIVERY</div>
+            <div className="stat-val">{commissions.nexago_delivery_commissions != null ? formatVol(commissions.nexago_delivery_commissions) : '—'}</div>
+          </div>
         </div>
       )}
       <div className="alert alert-y" style={{ marginTop: 16 }}>

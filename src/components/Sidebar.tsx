@@ -1,9 +1,12 @@
 import { useEffect, useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { themeLogoSrc, useTheme } from '../contexts/ThemeContext'
 import { api } from '../api'
 
 type NotifSummary = { pendingKyc?: number; openRiskAlerts?: number; pendingHostApplications?: number; total?: number } | null
+
+const COLLAPSE_KEY = 'nexa-admin-sidebar-collapsed'
 
 const navItems = [
   { section: 'Overview', links: [
@@ -158,10 +161,23 @@ function getEnvBadge() {
   return 'DEV'
 }
 
-export function Sidebar() {
+type SidebarProps = {
+  mobileDrawerOpen?: boolean
+  onRequestCloseMobile?: () => void
+}
+
+export function Sidebar({ mobileDrawerOpen = false, onRequestCloseMobile }: SidebarProps) {
+  const { theme } = useTheme()
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [notifications, setNotifications] = useState<NotifSummary>(null)
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return localStorage.getItem(COLLAPSE_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
   const envBadge = getEnvBadge()
 
   useEffect(() => {
@@ -170,18 +186,43 @@ export function Sidebar() {
       .catch(() => setNotifications(null))
   }, [])
 
-  const handleLogout = () => { logout(); navigate('/login') }
+  useEffect(() => {
+    try {
+      localStorage.setItem(COLLAPSE_KEY, collapsed ? '1' : '0')
+    } catch {
+      /* ignore */
+    }
+  }, [collapsed])
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+  }
+
+  const linkExtra = { onClick: () => onRequestCloseMobile?.() }
+
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${collapsed ? 'sidebar--collapsed' : ''} ${mobileDrawerOpen ? 'drawer-open' : ''}`}>
       <div className="sb-brand">
         <div className="sb-logo">
-          <img src="/logo/nexa-icon.png" alt="Nexa" />
+          <img src={themeLogoSrc(theme)} alt="Nexa" />
         </div>
         <div className="sb-brand-text">
           <div className="sb-brand-name">Nexa Admin</div>
           <div className="sb-brand-sub">Ecosystem Dashboard</div>
         </div>
         <span className="env-badge">{envBadge}</span>
+        <button
+          type="button"
+          className="sb-collapse-btn"
+          title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-expanded={!collapsed}
+          onClick={() => setCollapsed((c) => !c)}
+        >
+          <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+            {collapsed ? <path d="M9 18l6-6-6-6" /> : <path d="M15 18l-6-6 6-6" />}
+          </svg>
+        </button>
       </div>
 
       {navItems.map((block, i) => (
@@ -192,9 +233,15 @@ export function Sidebar() {
               {block.links.map((link) => {
                 const count = getBadgeCount(link, notifications)
                 return (
-                  <NavLink key={link.to} to={link.to} end={link.to === '/'} className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}>
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    end={link.to === '/'}
+                    className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}
+                    {...linkExtra}
+                  >
                     {icons[link.icon]}
-                    {link.label}
+                    <span className="sb-link-text">{link.label}</span>
                     {showLiveBadge(link) && <span className="sb-badge">●</span>}
                     {count != null && <span className="sb-badge sb-badge-y">{count}</span>}
                   </NavLink>
@@ -208,19 +255,24 @@ export function Sidebar() {
               <div className="sb-section">
                 <div className="sb-product-tag">
                   <div className="sb-product-dot" style={{ background: block.color }} />
-                  <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'rgba(255,255,255,.3)', letterSpacing: '.8px' }}>{block.product}</span>
+                  <span style={{ fontSize: '9.5px', fontWeight: 800, color: 'rgba(255,255,255,.38)', letterSpacing: '.8px' }}>{block.product}</span>
                 </div>
                 {block.links.map((link) => {
                   const count = getBadgeCount(link, notifications)
                   return (
-                    <NavLink key={link.to} to={link.to} className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}>
+                    <NavLink
+                      key={link.to}
+                      to={link.to}
+                      className={({ isActive }) => `sb-item ${isActive ? 'active' : ''}`}
+                      {...linkExtra}
+                    >
                       {icons[link.icon]}
-                      {link.label}
+                      <span className="sb-link-text">{link.label}</span>
                       {showLiveBadge(link) && <span className="sb-badge">●</span>}
                       {count != null && (
                         <span
                           className="sb-badge"
-                          style={block.product === 'NEXA PAY' ? { background: 'var(--y)', color: 'var(--ink)' } : block.product === 'NEXA STAYS' ? { background: 'var(--p)', color: 'white' } : undefined}
+                          style={block.product === 'NEXA PAY' ? { background: 'var(--y)', color: '#0b1020' } : block.product === 'NEXA STAYS' ? { background: 'var(--p)', color: 'white' } : undefined}
                         >
                           {count}
                         </span>
@@ -235,15 +287,17 @@ export function Sidebar() {
       ))}
 
       <div className="sb-bottom">
-        <div className="sb-user" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 9, width: '100%' }}>
-            <div className="sb-user-av">{(user?.email || 'S').slice(0, 1).toUpperCase()}</div>
-            <div>
+        <div className="sb-profile-card">
+          <div className="sb-user">
+            <div className="sb-user-av">{(user?.email || 'A').slice(0, 1).toUpperCase()}</div>
+            <div style={{ minWidth: 0 }}>
               <div className="sb-user-name">Super Admin</div>
               <div className="sb-user-role">{user?.email ?? 'admin@nexa.ma'}</div>
             </div>
           </div>
-          <button type="button" className="btn btn-ghost btn-sm" onClick={handleLogout} style={{ color: 'rgba(255,255,255,.6)', fontSize: 11 }}>Sign out</button>
+          <button type="button" className="btn-signout" onClick={handleLogout}>
+            Sign out
+          </button>
         </div>
       </div>
     </aside>

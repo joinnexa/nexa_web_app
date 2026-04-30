@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
 import type { DashboardStats } from '../api/types'
+import { DASHBOARD_KPI_POLL_MS } from '../constants/dashboardPoll'
+import { useIntervalPoll } from '../hooks/useIntervalPoll'
 
 function formatVol(n: number) {
   if (n >= 1e6) return `${(n / 1e6).toFixed(1)}M`
@@ -14,23 +16,34 @@ export function PayDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(() => {
-    setLoading(true)
-    setError(null)
+  const load = useCallback((opts?: { background?: boolean }) => {
+    const bg = opts?.background ?? false
+    if (!bg) {
+      setLoading(true)
+      setError(null)
+    }
     Promise.all([
       api.DASHBOARD.getStats().catch((e) => e),
       api.FINANCE.getRevenue().catch(() => null),
     ])
       .then(([s, r]) => {
         if (s && !(s instanceof Error)) setStats(s)
-        else if (s instanceof Error) setError(s?.message ?? 'Failed to load')
+        else if (!bg && s instanceof Error) setError(s?.message ?? 'Failed to load')
         if (r && typeof r === 'object') setRevenue(r)
       })
-      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load'))
-      .finally(() => setLoading(false))
+      .catch((e) => {
+        if (!bg) setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load')
+      })
+      .finally(() => {
+        if (!bg) setLoading(false)
+      })
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useIntervalPoll(() => load({ background: true }), DASHBOARD_KPI_POLL_MS)
 
   if (loading && !stats) return <div className="section-title">Pay Dashboard</div>
   if (error && !stats) return <><div className="section-title">Pay Dashboard</div><div className="alert alert-r">{error}</div></>

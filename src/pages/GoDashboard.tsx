@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { api } from '../api'
+import { DASHBOARD_KPI_POLL_MS } from '../constants/dashboardPoll'
+import { useIntervalPoll } from '../hooks/useIntervalPoll'
 
 function formatVol(n: number) {
   if (n >= 1e6) return `${(n / 1e6).toFixed(2)}M`
@@ -19,16 +21,27 @@ export function GoDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(() => {
-    setLoading(true)
-    setError(null)
+  const load = useCallback((opts?: { background?: boolean }) => {
+    const bg = opts?.background ?? false
+    if (!bg) {
+      setLoading(true)
+      setError(null)
+    }
     api.GO.getStats()
       .then(setStats)
-      .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load'))
-      .finally(() => setLoading(false))
+      .catch((e) => {
+        if (!bg) setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load')
+      })
+      .finally(() => {
+        if (!bg) setLoading(false)
+      })
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useIntervalPoll(() => load({ background: true }), DASHBOARD_KPI_POLL_MS)
 
   if (loading && !stats) return <div className="section-title">Go Dashboard</div>
   if (error && !stats) return <><div className="section-title">Go Dashboard</div><div className="alert alert-r">{error}</div></>

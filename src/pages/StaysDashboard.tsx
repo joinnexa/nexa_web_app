@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
+import { DASHBOARD_KPI_POLL_MS } from '../constants/dashboardPoll'
+import { useIntervalPoll } from '../hooks/useIntervalPoll'
 
 interface StaysStats {
   activeListings?: number
@@ -18,9 +20,12 @@ export function StaysDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const load = useCallback(() => {
-    setLoading(true)
-    setError(null)
+  const load = useCallback((opts?: { background?: boolean }) => {
+    const bg = opts?.background ?? false
+    if (!bg) {
+      setLoading(true)
+      setError(null)
+    }
     Promise.allSettled([
       api.STAYS.getStats(),
       api.STAYS.getBookings({ limit: 10 }),
@@ -36,7 +41,10 @@ export function StaysDashboard() {
             hostsPending: s?.pendingHostVerification ?? s?.hostsPending,
             revenueMtd: s?.totalRevenue ?? s?.todayRevenue ?? s?.revenueMtd,
           } as StaysStats)
-        } else setError(statsResult.reason?.response?.data?.message ?? statsResult.reason?.message ?? 'Failed to load stats')
+          if (!bg) setError(null)
+        } else if (!bg) {
+          setError(statsResult.reason?.response?.data?.message ?? statsResult.reason?.message ?? 'Failed to load stats')
+        }
         if (bookingsResult.status === 'fulfilled') {
           const b = bookingsResult.value
           setBookings(Array.isArray(b) ? b : (b as { items?: unknown[] }).items ?? [])
@@ -50,10 +58,16 @@ export function StaysDashboard() {
           setPendingProfiles(Array.isArray(hp) ? hp : (hp as { items?: unknown[] }).items ?? [])
         }
       })
-      .finally(() => setLoading(false))
+      .finally(() => {
+        if (!bg) setLoading(false)
+      })
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+  }, [load])
+
+  useIntervalPoll(() => load({ background: true }), DASHBOARD_KPI_POLL_MS)
 
   if (loading && !stats) return <div className="section-title">Stays Dashboard</div>
   if (error && !stats) return <><div className="section-title">Stays Dashboard</div><div className="alert alert-r">{error}</div></>
@@ -121,7 +135,7 @@ export function StaysDashboard() {
                       <div className="feed-text" style={{ fontWeight: 700 }}>{label}</div>
                       <div className="feed-time">Verification</div>
                     </div>
-                    <button type="button" className="btn btn-g btn-sm" onClick={() => api.STAYS.approveHost(String(row.id)).then(load)}>
+                    <button type="button" className="btn btn-g btn-sm" onClick={() => api.STAYS.approveHost(String(row.id)).then(() => load())}>
                       Approve
                     </button>
                   </div>
@@ -143,7 +157,7 @@ export function StaysDashboard() {
                     <div className="feed-text" style={{ fontWeight: 700 }}>{String(row.full_name ?? row.user_id ?? row.id ?? 'Application').slice(0, 24)}</div>
                     <div className="feed-time">Application</div>
                   </div>
-                  <button type="button" className="btn btn-g btn-sm" onClick={() => api.STAYS.approveHostApplication(String(row.id)).then(load)}>Approve</button>
+                  <button type="button" className="btn btn-g btn-sm" onClick={() => api.STAYS.approveHostApplication(String(row.id)).then(() => load())}>Approve</button>
                 </div>
               )})}
             </div>

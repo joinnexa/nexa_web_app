@@ -1,8 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { api } from '../api'
 import type { AdminTransaction } from '../api/types'
+import { DASHBOARD_KPI_POLL_MS } from '../constants/dashboardPoll'
 import { useDashboardStats } from '../hooks/useDashboardStats'
+import { useIntervalPoll } from '../hooks/useIntervalPoll'
 
 function timeAgo(iso: string) {
   const d = new Date(iso)
@@ -60,7 +62,9 @@ function formatVolume(n: number) {
 }
 
 export function Overview() {
-  const { pay, stays, go, systemStatus, loading, error } = useDashboardStats()
+  const { pay, stays, go, systemStatus, loading, error } = useDashboardStats({
+    pollIntervalMs: DASHBOARD_KPI_POLL_MS,
+  })
   const [recentTx, setRecentTx] = useState<AdminTransaction[]>([])
   const [revenue, setRevenue] = useState<{
     payRevenue?: number
@@ -73,45 +77,56 @@ export function Overview() {
   const flagged = pay?.flaggedTransactions ?? 0
   const pendingKyc = pay?.pendingKyc ?? 0
 
-  useEffect(() => {
-    api.TRANSACTIONS.getList({ limit: 5 })
-      .then((data) => setRecentTx(Array.isArray(data) ? data : (data as { data?: AdminTransaction[] }).data ?? []))
-      .catch(() => {})
+  const refreshOverviewFeeds = useCallback(async (initial: boolean) => {
+    if (initial) setActivityLoading(true)
+    try {
+      const [txRes, revRes, actRes] = await Promise.all([
+        api.TRANSACTIONS.getList({ limit: 5 }).catch(() => null),
+        api.FINANCE.getRevenue().catch(() => null),
+        api.ACTIVITY.getRecent({ limit: 8 }).catch(() => null),
+      ])
+      if (txRes !== null) {
+        const data = txRes as AdminTransaction[] | { data?: AdminTransaction[] }
+        setRecentTx(Array.isArray(data) ? data : data.data ?? [])
+      }
+      if (revRes !== null && typeof revRes === 'object')
+        setRevenue(revRes as {
+          payRevenue?: number
+          goRideRevenue?: number
+          goDeliveryRevenue?: number
+          total_revenue?: number
+        })
+      setActivityEvents((actRes as { events?: ActivityEvent[] } | null)?.events ?? [])
+    } finally {
+      if (initial) setActivityLoading(false)
+    }
   }, [])
 
   useEffect(() => {
-    api.FINANCE.getRevenue()
-      .then((res) => setRevenue(res as any))
-      .catch(() => setRevenue(null))
-  }, [])
+    void refreshOverviewFeeds(true)
+  }, [refreshOverviewFeeds])
 
-  useEffect(() => {
-    setActivityLoading(true)
-    api.ACTIVITY.getRecent({ limit: 8 })
-      .then((res) => setActivityEvents(res?.events ?? []))
-      .catch(() => setActivityEvents([]))
-      .finally(() => setActivityLoading(false))
-  }, [])
+  useIntervalPoll(() => void refreshOverviewFeeds(false), DASHBOARD_KPI_POLL_MS)
 
   if (loading && !pay) {
     return (
-      <>
+      <div className="page-overview">
         <div className="section-title">Ecosystem Overview</div>
         <div className="section-sub">Loading…</div>
-      </>
+      </div>
     )
   }
   if (error && !pay) {
     return (
-      <>
+      <div className="page-overview">
         <div className="section-title">Ecosystem Overview</div>
         <div className="alert alert-r">{error}</div>
-      </>
+      </div>
     )
   }
 
   return (
-    <>
+    <div className="page-overview">
       <div className="section-title">Ecosystem Overview</div>
       <div className="section-sub">All products — Nexa Pay · Nexa Go · Nexa Stays — real-time summary</div>
 
@@ -300,7 +315,7 @@ export function Overview() {
                 return (
                   <>
                     <svg viewBox="0 0 120 120" width={120} height={120} style={{ display: 'block', margin: '0 auto 16px' }}>
-                      <circle cx={60} cy={60} r={48} fill="none" stroke="var(--surf2)" strokeWidth={20} />
+                      <circle cx={60} cy={60} r={48} fill="none" stroke="var(--chart-track)" strokeWidth={20} />
                       <circle
                         cx={60}
                         cy={60}
@@ -334,7 +349,7 @@ export function Overview() {
                         strokeDashoffset={-(payLen + goLen)}
                         transform="rotate(-90 60 60)"
                       />
-                      <text x={60} y={58} textAnchor="middle" fontSize={14} fontWeight={800} fill="var(--ink)">
+                      <text x={60} y={58} textAnchor="middle" fontSize={14} fontWeight={600} fill="var(--text-primary)">
                         {total ? formatVolume(total) : '—'}
                       </text>
                       <text x={60} y={70} textAnchor="middle" fontSize={8} fill="var(--muted)">MAD</text>
@@ -409,6 +424,6 @@ export function Overview() {
           </div>
         </div>
       </div>
-    </>
+    </div>
   )
 }

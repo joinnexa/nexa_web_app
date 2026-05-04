@@ -145,6 +145,8 @@ export interface WaitlistEntry {
   city: string
   email: string
   how_will_use_nexa?: string | null
+  source?: string | null
+  user_type?: string | null
   created_at: string
 }
 

@@ -283,7 +283,7 @@ const NOTIFICATIONS = {
 }
 
 const WAITLIST = {
-  getList: (params?: { page?: number; limit?: number }) =>
+  getList: (params?: { page?: number; limit?: number; source?: string; user_type?: string }) =>
     apiClient
       .get<{ data: WaitlistEntry[]; total: number; page: number; limit: number; total_pages: number }>(
         '/admin/waitlist',

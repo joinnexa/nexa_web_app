@@ -16,18 +16,35 @@ export function WaitlistLeads() {
   const [error, setError] = useState<string | null>(null)
   const [page, setPage] = useState(1)
   const [total, setTotal] = useState(0)
+  const [sourceFilter, setSourceFilter] = useState('all')
+  const [userTypeFilter, setUserTypeFilter] = useState('all')
+  const sourceCounts = rows.reduce<Record<string, number>>((acc, row) => {
+    const key = row.source?.trim() || 'unknown'
+    acc[key] = (acc[key] ?? 0) + 1
+    return acc
+  }, {})
 
   const load = useCallback(() => {
     setLoading(true)
     setError(null)
-    api.WAITLIST.getList({ page, limit: 20 })
+    api.WAITLIST.getList({
+      page,
+      limit: 20,
+      source: sourceFilter === 'all' ? undefined : sourceFilter,
+      user_type:
+        userTypeFilter === 'all'
+          ? undefined
+          : userTypeFilter === 'unknown'
+            ? ''
+            : userTypeFilter,
+    })
       .then((res) => {
         setRows(res?.data ?? [])
         setTotal(res?.total ?? 0)
       })
       .catch((e) => setError(e?.response?.data?.message ?? e?.message ?? 'Failed to load waitlist'))
       .finally(() => setLoading(false))
-  }, [page])
+  }, [page, sourceFilter, userTypeFilter])
 
   useEffect(() => {
     load()
@@ -53,11 +70,60 @@ export function WaitlistLeads() {
           <div className="stat-val">{new Set(rows.map((r) => r.email)).size}</div>
         </div>
       </div>
+      <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3,1fr)' }}>
+        <div className="stat-card">
+          <div className="stat-label">NEXA WEB PUBLIC</div>
+          <div className="stat-val">{sourceCounts.nexa_web_public ?? 0}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">NEXA GO WEB PUBLIC</div>
+          <div className="stat-val">{sourceCounts.nexa_go_web_public ?? 0}</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-label">NEXA PAY WEB PUBLIC</div>
+          <div className="stat-val">{sourceCounts.nexa_pay_web_public ?? 0}</div>
+        </div>
+      </div>
 
       <div className="card">
         <div className="card-hdr">
           <div className="card-title">Lead List</div>
           <div className="card-actions">
+            <select
+              value={sourceFilter}
+              onChange={(event) => {
+                setPage(1)
+                setSourceFilter(event.target.value)
+              }}
+              className="inp"
+              aria-label="Filter by source"
+              style={{ minWidth: 220 }}
+            >
+              <option value="all">All sources</option>
+              <option value="nexa_web_public">Nexa Web Public</option>
+              <option value="nexa_go_web_public">Nexa Go Web Public</option>
+              <option value="nexa_pay_web_public">Nexa Pay Web Public</option>
+              <option value="unknown">Unknown</option>
+            </select>
+            <select
+              value={userTypeFilter}
+              onChange={(event) => {
+                setPage(1)
+                setUserTypeFilter(event.target.value)
+              }}
+              className="inp"
+              aria-label="Filter by user type"
+              style={{ minWidth: 220 }}
+            >
+              <option value="all">All user types</option>
+              <option value="consumer">Consumer</option>
+              <option value="merchant">Merchant</option>
+              <option value="investor">Investor</option>
+              <option value="rider">Rider</option>
+              <option value="driver_courier">Driver / Courier</option>
+              <option value="merchant_partner">Merchant / Partner</option>
+              <option value="unknown">Unknown</option>
+            </select>
             <button type="button" className="btn btn-dark btn-sm" onClick={load} disabled={loading}>
               Refresh
             </button>
@@ -72,20 +138,22 @@ export function WaitlistLeads() {
                 <th>Email</th>
                 <th>Phone</th>
                 <th>City</th>
+                <th>Source</th>
+                <th>User Type</th>
                 <th>Intent</th>
               </tr>
             </thead>
             <tbody>
               {loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="td-muted" style={{ padding: 16 }}>
+                  <td colSpan={8} className="td-muted" style={{ padding: 16 }}>
                     Loading…
                   </td>
                 </tr>
               )}
               {!loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={6} className="td-muted" style={{ padding: 16 }}>
+                  <td colSpan={8} className="td-muted" style={{ padding: 16 }}>
                     No waitlist leads yet
                   </td>
                 </tr>
@@ -97,6 +165,8 @@ export function WaitlistLeads() {
                   <td>{row.email}</td>
                   <td>{row.phone_number}</td>
                   <td>{row.city}</td>
+                  <td>{row.source || 'unknown'}</td>
+                  <td>{row.user_type || '—'}</td>
                   <td>{row.how_will_use_nexa || '—'}</td>
                 </tr>
               ))}

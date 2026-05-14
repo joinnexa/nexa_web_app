@@ -102,7 +102,9 @@ export function FraudRisk() {
                 <th>User</th>
                 <th>Type</th>
                 <th>Amount</th>
-                <th>TXN</th>
+                <th>Reference</th>
+                <th>TXN id</th>
+                <th>Details</th>
                 <th>Risk</th>
                 <th>Status</th>
                 <th>Time</th>
@@ -110,15 +112,25 @@ export function FraudRisk() {
               </tr>
             </thead>
             <tbody>
-              {loading && <tr><td colSpan={9} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>Loading…</td></tr>}
-              {!loading && alerts.length === 0 && <tr><td colSpan={9} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>No alerts</td></tr>}
+              {loading && <tr><td colSpan={11} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>Loading…</td></tr>}
+              {!loading && alerts.length === 0 && <tr><td colSpan={11} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>No alerts</td></tr>}
               {!loading && alerts.map((a) => (
                 <tr key={a.id}>
-                  <td className="td-mono">{a.id?.slice(0, 8)}</td>
-                  <td>{a.user_id?.slice(0, 8) ?? '—'}</td>
+                  <td className="td-mono" title={a.id}>{a.id?.slice(0, 8)}…</td>
+                  <td className="td-mono" title={a.user_id ?? ''}>
+                    {a.user_phone?.trim() || (a.user_id ? `${a.user_id.slice(0, 8)}…` : '—')}
+                  </td>
                   <td><span className="badge badge-r">{a.type || 'Alert'}</span></td>
-                  <td><strong>{a.amount != null ? `${Number(a.amount).toLocaleString()} MAD` : '—'}</strong></td>
-                  <td className="td-mono">{a.transaction_id ? a.transaction_id.slice(0, 8) : '—'}</td>
+                  <td><strong>{a.amount != null && !Number.isNaN(Number(a.amount)) ? `${Number(a.amount).toLocaleString()} MAD` : '—'}</strong></td>
+                  <td className="td-mono" style={{ maxWidth: 140 }} title={a.transaction_reference ?? ''}>
+                    {a.transaction_reference?.trim() || '—'}
+                  </td>
+                  <td className="td-mono" style={{ maxWidth: 220, fontSize: 11, wordBreak: 'break-all' }} title={a.transaction_id ?? ''}>
+                    {a.transaction_id?.trim() || '—'}
+                  </td>
+                  <td className="td-muted" style={{ maxWidth: 260, fontSize: 12 }} title={a.description ?? ''}>
+                    {a.description && a.description.length > 90 ? `${a.description.slice(0, 90)}…` : (a.description || '—')}
+                  </td>
                   <td>{a.risk_score ?? '—'}</td>
                   <td><span className={`badge ${(a.status || '').toUpperCase() === 'OPEN' ? 'badge-r' : 'badge-g'}`}>{a.status || '—'}</span></td>
                   <td className="td-muted">{a.created_at ? new Date(a.created_at).toLocaleString() : '—'}</td>

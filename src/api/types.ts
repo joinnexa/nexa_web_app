@@ -68,11 +68,14 @@ export interface AdminTransaction {
 export interface RiskAlert {
   id: string
   user_id?: string
+  user_phone?: string
   transaction_id?: string
+  transaction_reference?: string | null
   type?: string
+  severity?: string
   status: string
   risk_score?: number
-  amount?: number
+  amount?: number | null
   description?: string
   created_at: string
   [key: string]: unknown

@@ -3,25 +3,19 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import type { StaysStats } from '../api/types'
 
-type Tab = 'verification' | 'applications'
-
-type HostProfileRow = {
+type HostOnboardingRow = {
   id: string
   user_id?: string
-  submitted_at?: string | null
-  host_verification_status?: string
-  user?: Record<string, unknown> | null
-}
-
-type HostAppRow = {
-  id: string
-  applicant_user_id?: string
   full_name?: string | null
   email?: string | null
-  phone_number?: string
-  status?: string
-  created_at?: string
-  applicant?: Record<string, unknown> | null
+  phone?: string | null
+  source?: string
+  submitted_from?: string | null
+  application_status?: string
+  identity_status?: string
+  host_verification_status?: string
+  submitted_at?: string | null
+  user?: Record<string, unknown> | null
 }
 
 function unwrapItems<T>(raw: unknown): T[] {
@@ -30,7 +24,8 @@ function unwrapItems<T>(raw: unknown): T[] {
   return o?.items ?? []
 }
 
-function userLabel(u: Record<string, unknown> | null | undefined): string {
+function userLabel(u: Record<string, unknown> | null | undefined, row: HostOnboardingRow): string {
+  if (row.full_name) return row.full_name
   if (!u) return '—'
   return String(
     u.full_name ?? u.fullName ?? u.email ?? u.phone_number ?? u.phoneNumber ?? u.id ?? '—',
@@ -47,16 +42,14 @@ function fmtDate(iso: string | null | undefined): string {
 }
 
 export function Hosts() {
-  const [tab, setTab] = useState<Tab>('verification')
   const [stats, setStats] = useState<StaysStats | null>(null)
-  const [profiles, setProfiles] = useState<HostProfileRow[]>([])
-  const [applications, setApplications] = useState<HostAppRow[]>([])
+  const [rows, setRows] = useState<HostOnboardingRow[]>([])
   const [loading, setLoading] = useState(true)
   const [actionBusy, setActionBusy] = useState<string | null>(null)
-  const [rejectOpen, setRejectOpen] = useState<{ kind: 'profile' | 'app'; id: string } | null>(null)
+  const [rejectOpen, setRejectOpen] = useState<string | null>(null)
   const [rejectReason, setRejectReason] = useState('')
-  const [selectedProfileId, setSelectedProfileId] = useState<string | null>(null)
-  const [selectedApplicationId, setSelectedApplicationId] = useState<string | null>(null)
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [statusFilter, setStatusFilter] = useState<'PENDING' | 'all'>('PENDING')
 
   const loadStats = useCallback(() => {
     api.STAYS.getStats()
@@ -64,39 +57,24 @@ export function Hosts() {
       .catch(() => setStats(null))
   }, [])
 
-  const loadVerification = useCallback(() => {
-    return api.STAYS
-      .getHosts({ status: 'PENDING', limit: 100 })
-      .then((r) => {
-        const rows = unwrapItems<HostProfileRow>(r)
-        setProfiles(rows)
-        setSelectedProfileId((current) => (current && rows.some((x) => x.id === current) ? current : (rows[0]?.id ?? null)))
-      })
-      .catch(() => setProfiles([]))
-  }, [])
-
-  const loadApplications = useCallback(() => {
-    return Promise.all([
-      api.STAYS.getHostApplications({ status: 'PENDING', limit: 100 }),
-      api.STAYS.getHostApplications({ status: 'UNDER_REVIEW', limit: 100 }),
-    ])
-      .then(([a, b]) => {
-        const merged = [...unwrapItems<HostAppRow>(a), ...unwrapItems<HostAppRow>(b)]
-        const byId = new Map<string, HostAppRow>()
-        for (const row of merged) byId.set(row.id, row)
-        const rows = [...byId.values()].sort((x, y) => String(y.created_at ?? '').localeCompare(String(x.created_at ?? '')))
-        setApplications(rows)
-        setSelectedApplicationId((current) =>
-          current && rows.some((x) => x.id === current) ? current : (rows[0]?.id ?? null),
-        )
-      })
-      .catch(() => setApplications([]))
-  }, [])
+  const loadOnboarding = useCallback(() => {
+    const params =
+      statusFilter === 'PENDING'
+        ? { status: 'PENDING', limit: 100 }
+        : { status: 'all', limit: 100 }
+    return api.STAYS.getHosts(params).then((r) => {
+      const list = unwrapItems<HostOnboardingRow>(r)
+      setRows(list)
+      setSelectedId((current) =>
+        current && list.some((x) => x.id === current) ? current : (list[0]?.id ?? null),
+      )
+    })
+  }, [statusFilter])
 
   const refresh = useCallback(() => {
     setLoading(true)
-    Promise.all([loadStats(), loadVerification(), loadApplications()]).finally(() => setLoading(false))
-  }, [loadApplications, loadStats, loadVerification])
+    Promise.all([loadStats(), loadOnboarding()]).finally(() => setLoading(false))
+  }, [loadOnboarding, loadStats])
 
   useEffect(() => {
     refresh()
@@ -105,14 +83,9 @@ export function Hosts() {
   const submitReject = async () => {
     if (!rejectOpen) return
     const reason = rejectReason.trim() || 'Rejected'
-    const key = `${rejectOpen.kind}:${rejectOpen.id}`
-    setActionBusy(key)
+    setActionBusy(`reject:${rejectOpen}`)
     try {
-      if (rejectOpen.kind === 'profile') {
-        await api.STAYS.rejectHost(rejectOpen.id, reason)
-      } else {
-        await api.STAYS.rejectHostApplication(rejectOpen.id, reason)
-      }
+      await api.STAYS.rejectHost(rejectOpen, reason)
       setRejectOpen(null)
       setRejectReason('')
       await refresh()
@@ -121,8 +94,8 @@ export function Hosts() {
     }
   }
 
-  const approveProfile = async (id: string) => {
-    setActionBusy(`ap:${id}`)
+  const approveRow = async (id: string) => {
+    setActionBusy(`approve:${id}`)
     try {
       await api.STAYS.approveHost(id)
       await refresh()
@@ -131,276 +104,189 @@ export function Hosts() {
     }
   }
 
-  const approveApp = async (id: string) => {
-    setActionBusy(`aa:${id}`)
-    try {
-      await api.STAYS.approveHostApplication(id)
-      await refresh()
-    } finally {
-      setActionBusy(null)
-    }
-  }
-
-  const verified = stats?.approvedHosts ?? 0
-  const pendingVerify = stats?.pendingHostVerification ?? profiles.length
-  const selectedProfile = profiles.find((p) => p.id === selectedProfileId) ?? null
-  const selectedApplication = applications.find((a) => a.id === selectedApplicationId) ?? null
+  const selected = rows.find((r) => r.id === selectedId) ?? null
+  const pendingCount = stats?.pendingHostVerification ?? rows.length
 
   return (
     <>
-      <div className="section-title">Host review</div>
+      <div className="section-title">Host onboarding</div>
       <div className="section-sub">
-        ID verification for hosts (profiles) and new host sign-ups (applications) ·{' '}
+        Unified queue (mobile + web) on stays_host_profiles ·{' '}
         <Link to="/stays" style={{ color: 'var(--p)' }}>
           Stays Dashboard
+        </Link>
+        {' · '}
+        <Link to="/listings" style={{ color: 'var(--p)' }}>
+          Listings
         </Link>
       </div>
       <div className="stats-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         <div className="stat-card p">
-          <div className="stat-label">VERIFIED HOSTS</div>
-          <div className="stat-val">{loading && !stats ? '…' : verified}</div>
+          <div className="stat-label">APPROVED HOSTS</div>
+          <div className="stat-val">{loading && !stats ? '…' : (stats?.approvedHosts ?? 0)}</div>
         </div>
         <div className="stat-card y">
-          <div className="stat-label">PENDING VERIFICATION</div>
-          <div className="stat-val">{loading ? '…' : pendingVerify}</div>
-          <div className="stat-sub">Documents / profile review</div>
+          <div className="stat-label">PENDING ONBOARDING</div>
+          <div className="stat-val">{loading ? '…' : pendingCount}</div>
+          <div className="stat-sub">Applications awaiting review</div>
         </div>
         <div className="stat-card g">
-          <div className="stat-label">PENDING APPLICATIONS</div>
-          <div className="stat-val">{loading ? '…' : applications.length}</div>
-          <div className="stat-sub">Become-a-host queue</div>
+          <div className="stat-label">IN QUEUE</div>
+          <div className="stat-val">{loading ? '…' : rows.length}</div>
+          <div className="stat-sub">Filtered view</div>
         </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button
           type="button"
-          className={`btn btn-sm ${tab === 'verification' ? 'btn-y' : 'btn-ghost'}`}
-          onClick={() => setTab('verification')}
+          className={`btn btn-sm ${statusFilter === 'PENDING' ? 'btn-y' : 'btn-ghost'}`}
+          onClick={() => setStatusFilter('PENDING')}
         >
-          Verification ({profiles.length})
+          Pending ({statusFilter === 'PENDING' ? rows.length : '…'})
         </button>
         <button
           type="button"
-          className={`btn btn-sm ${tab === 'applications' ? 'btn-y' : 'btn-ghost'}`}
-          onClick={() => setTab('applications')}
+          className={`btn btn-sm ${statusFilter === 'all' ? 'btn-y' : 'btn-ghost'}`}
+          onClick={() => setStatusFilter('all')}
         >
-          Applications ({applications.length})
+          All statuses
         </button>
       </div>
 
-      {tab === 'verification' && (
-        <div className="row">
-          <div className="col-2">
-        <div className="card">
-          <div className="card-hdr">
-            <div className="card-title">Host verification</div>
-            <span className="td-muted" style={{ fontSize: 11 }}>
-              Approve or reject ID documents before listings go live
-            </span>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Host</th>
-                  <th>User ID</th>
-                  <th>Submitted</th>
-                  <th style={{ width: 200 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {profiles.length === 0 && (
+      <div className="row">
+        <div className="col-2">
+          <div className="card">
+            <div className="card-hdr">
+              <div className="card-title">Host onboarding queue</div>
+              <span className="td-muted" style={{ fontSize: 11 }}>
+                Approve to create HOST account; listings reviewed separately
+              </span>
+            </div>
+            <div className="table-wrap">
+              <table>
+                <thead>
                   <tr>
-                    <td colSpan={4} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>
-                      No profiles pending verification
-                    </td>
+                    <th>Name</th>
+                    <th>Phone</th>
+                    <th>Source</th>
+                    <th>App status</th>
+                    <th>Identity</th>
+                    <th>Submitted</th>
+                    <th style={{ width: 200 }}>Actions</th>
                   </tr>
-                )}
-                {profiles.map((p) => {
-                  const busy = actionBusy === `ap:${p.id}`
-                  return (
-                    <tr
-                      key={p.id}
-                      onClick={() => setSelectedProfileId(p.id)}
-                      style={{
-                        cursor: 'pointer',
-                        background: selectedProfileId === p.id ? 'var(--surf2)' : undefined,
-                      }}
-                    >
-                      <td>
-                        <strong>{userLabel(p.user)}</strong>
-                      </td>
-                      <td className="td-mono" style={{ fontSize: 11 }}>
-                        {(p.user_id ?? (p.user?.id as string) ?? '—').toString().slice(0, 8)}…
-                      </td>
-                      <td className="td-muted">{fmtDate(p.submitted_at)}</td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            className="btn btn-g btn-sm"
-                            disabled={busy}
-                            onClick={() => approveProfile(p.id)}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-r btn-sm"
-                            disabled={busy}
-                            onClick={() => {
-                              setRejectReason('')
-                              setRejectOpen({ kind: 'profile', id: p.id })
-                            }}
-                          >
-                            Reject
-                          </button>
-                        </div>
+                </thead>
+                <tbody>
+                  {rows.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>
+                        No host onboarding records
                       </td>
                     </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-          </div>
-          <div className="col-1">
-            <div className="card" style={{ minHeight: 320 }}>
-              <div className="card-hdr">
-                <div className="card-title">Verification request details</div>
-              </div>
-              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {!selectedProfile && <div className="td-muted">Select a verification request</div>}
-                {selectedProfile && (
-                  <>
-                    <div><strong>Request ID:</strong> <span className="td-mono">{selectedProfile.id}</span></div>
-                    <div><strong>User:</strong> {userLabel(selectedProfile.user)}</div>
-                    <div><strong>User ID:</strong> {(selectedProfile.user_id ?? (selectedProfile.user?.id as string) ?? '—').toString()}</div>
-                    <div><strong>Status:</strong> {selectedProfile.host_verification_status ?? 'PENDING'}</div>
-                    <div><strong>Submitted:</strong> {fmtDate(selectedProfile.submitted_at)}</div>
-                    <details>
-                      <summary style={{ cursor: 'pointer' }}>Raw payload</summary>
-                      <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap' }}>
-                        {JSON.stringify(selectedProfile, null, 2)}
-                      </pre>
-                    </details>
-                  </>
-                )}
-              </div>
+                  )}
+                  {rows.map((row) => {
+                    const busy = actionBusy === `approve:${row.id}`
+                    return (
+                      <tr
+                        key={row.id}
+                        onClick={() => setSelectedId(row.id)}
+                        style={{
+                          cursor: 'pointer',
+                          background: selectedId === row.id ? 'var(--surf2)' : undefined,
+                        }}
+                      >
+                        <td>
+                          <strong>{userLabel(row.user, row)}</strong>
+                        </td>
+                        <td>{row.phone ?? '—'}</td>
+                        <td className="td-muted">{row.source ?? '—'}</td>
+                        <td>
+                          <span className="badge badge-y">
+                            {row.application_status ?? row.host_verification_status ?? 'PENDING'}
+                          </span>
+                        </td>
+                        <td className="td-muted">{row.identity_status ?? '—'}</td>
+                        <td className="td-muted">{fmtDate(row.submitted_at)}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              className="btn btn-g btn-sm"
+                              disabled={busy || row.application_status === 'APPROVED'}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                approveRow(row.id)
+                              }}
+                            >
+                              Approve
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-r btn-sm"
+                              disabled={!!actionBusy}
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setRejectReason('')
+                                setRejectOpen(row.id)
+                              }}
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
-      )}
-
-      {tab === 'applications' && (
-        <div className="row">
-          <div className="col-2">
-        <div className="card">
-          <div className="card-hdr">
-            <div className="card-title">Host applications</div>
-            <span className="td-muted" style={{ fontSize: 11 }}>
-              Consumers applying for a host account (separate from ID verification)
-            </span>
-          </div>
-          <div className="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Phone</th>
-                  <th>Email</th>
-                  <th>Status</th>
-                  <th style={{ width: 200 }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {applications.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="td-muted" style={{ textAlign: 'center', padding: 24 }}>
-                      No pending applications
-                    </td>
-                  </tr>
-                )}
-                {applications.map((a) => {
-                  const busy = actionBusy === `aa:${a.id}`
-                  return (
-                    <tr
-                      key={a.id}
-                      onClick={() => setSelectedApplicationId(a.id)}
-                      style={{
-                        cursor: 'pointer',
-                        background: selectedApplicationId === a.id ? 'var(--surf2)' : undefined,
-                      }}
-                    >
-                      <td>
-                        <strong>{a.full_name ?? userLabel(a.applicant)}</strong>
-                      </td>
-                      <td>{a.phone_number ?? '—'}</td>
-                      <td className="td-muted">{a.email ?? '—'}</td>
-                      <td>
-                        <span className="badge badge-y">{a.status ?? 'PENDING'}</span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                          <button
-                            type="button"
-                            className="btn btn-g btn-sm"
-                            disabled={busy}
-                            onClick={() => approveApp(a.id)}
-                          >
-                            Approve
-                          </button>
-                          <button
-                            type="button"
-                            className="btn btn-r btn-sm"
-                            disabled={busy}
-                            onClick={() => {
-                              setRejectReason('')
-                              setRejectOpen({ kind: 'app', id: a.id })
-                            }}
-                          >
-                            Reject
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-          </div>
-          <div className="col-1">
-            <div className="card" style={{ minHeight: 320 }}>
-              <div className="card-hdr">
-                <div className="card-title">Application details</div>
-              </div>
-              <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {!selectedApplication && <div className="td-muted">Select an application</div>}
-                {selectedApplication && (
-                  <>
-                    <div><strong>Application ID:</strong> <span className="td-mono">{selectedApplication.id}</span></div>
-                    <div><strong>Name:</strong> {selectedApplication.full_name ?? userLabel(selectedApplication.applicant)}</div>
-                    <div><strong>Phone:</strong> {selectedApplication.phone_number ?? '—'}</div>
-                    <div><strong>Email:</strong> {selectedApplication.email ?? '—'}</div>
-                    <div><strong>Status:</strong> {selectedApplication.status ?? 'PENDING'}</div>
-                    <div><strong>Submitted:</strong> {fmtDate(selectedApplication.created_at)}</div>
-                    <details>
-                      <summary style={{ cursor: 'pointer' }}>Raw payload</summary>
-                      <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap' }}>
-                        {JSON.stringify(selectedApplication, null, 2)}
-                      </pre>
-                    </details>
-                  </>
-                )}
-              </div>
+        <div className="col-1">
+          <div className="card" style={{ minHeight: 320 }}>
+            <div className="card-hdr">
+              <div className="card-title">Onboarding details</div>
+            </div>
+            <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {!selected && <div className="td-muted">Select a row</div>}
+              {selected && (
+                <>
+                  <div>
+                    <strong>Profile ID:</strong> <span className="td-mono">{selected.id}</span>
+                  </div>
+                  <div>
+                    <strong>Name:</strong> {userLabel(selected.user, selected)}
+                  </div>
+                  <div>
+                    <strong>Phone:</strong> {selected.phone ?? '—'}
+                  </div>
+                  <div>
+                    <strong>Email:</strong> {selected.email ?? '—'}
+                  </div>
+                  <div>
+                    <strong>Source:</strong> {selected.source ?? '—'} / {selected.submitted_from ?? '—'}
+                  </div>
+                  <div>
+                    <strong>Application:</strong> {selected.application_status ?? '—'}
+                  </div>
+                  <div>
+                    <strong>Identity:</strong> {selected.identity_status ?? '—'}
+                  </div>
+                  <div>
+                    <strong>Submitted:</strong> {fmtDate(selected.submitted_at)}
+                  </div>
+                  <details>
+                    <summary style={{ cursor: 'pointer' }}>Raw payload</summary>
+                    <pre style={{ fontSize: 11, whiteSpace: 'pre-wrap' }}>
+                      {JSON.stringify(selected, null, 2)}
+                    </pre>
+                  </details>
+                </>
+              )}
             </div>
           </div>
         </div>
-      )}
+      </div>
 
       {rejectOpen && (
         <div
@@ -416,10 +302,10 @@ export function Hosts() {
           }}
         >
           <div className="card-hdr">
-            <div className="card-title">Reject {rejectOpen.kind === 'profile' ? 'verification' : 'application'}</div>
+            <div className="card-title">Reject host onboarding</div>
           </div>
           <div className="card-body" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Reason (shown to host where applicable)</label>
+            <label style={{ fontSize: 12, color: 'var(--muted)' }}>Reason</label>
             <textarea
               rows={3}
               value={rejectReason}
